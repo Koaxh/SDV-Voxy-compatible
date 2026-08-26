@@ -1,81 +1,41 @@
-![Thumbnail](/shaders/textures/thumbCF.png)
-![Title Logo](/shaders/textures/title.png)
-[![Discord](https://img.shields.io/discord/604061216779796492.svg?label=FlameRender%E2%84%A2%20Studios&logo=discord&logoColor=white&logoWidth=16&labelColor=7289DA&style=for-the-badge)](https://discord.gg/UE85W5ynCg)
-[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/eldeston?style=for-the-badge&logo=x&color=%231DA1F2)](https://twitter.com/eldeston)
-[![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UCQCkkFh25ydxZwCqpBhJJlg?color=FF0000&logoWidth=16&label=Eldeston&logo=YouTube&style=for-the-badge)](https://www.youtube.com/channel/UCQCkkFh25ydxZwCqpBhJJlg)
-![CurseForge Downloads](https://img.shields.io/curseforge/dt/534748?style=for-the-badge&logo=curseforge&logoColor=%23FFFFFF&label=CurseForge%20Downloads&color=%23FF9101)
-![Modrinth Downloads](https://img.shields.io/modrinth/dt/LMIZZNxZ?style=for-the-badge&logo=modrinth&logoColor=%23FFFFFF&label=Modrinth%20Downloads&color=%2300FF00)
+# SDV-Voxy-compatible
 
-## Description
-   A shader pack created to convey the style of the cancelled __Super Duper Graphics Pack__ and other popular Minecraft titles. Developed by [@Eldeston](https://github.com/Eldeston), and presented by __FlameRender Studios__.
+终于将停更1年的super duper vanilla光影接近完整地voxy了！一天一夜，醒来了就去弄如何实现。
 
-## Sponsored by BisectHosting
-   [![Sponsor](/shaders/textures/sponsor0.png)](https://bisecthosting.com/FLAMERENDERSTUDIOS)
-   This shader is sponsored by **BisectHosting**. Open the image above or use the code [**FLAMERENDERSTUDIOS**](https://bisecthosting.com/FLAMERENDERSTUDIOS) to claim your discount to get ***25%*** off on your first month!
+首先让deepseek快速阅读voxy与sdv的管线，不去考虑translucent、taa、shadowcast、ssao等等的具体实现，一遍跑通。
 
-   Choose **BisectHosting** to host a wide range of games including some of my personal favorites: **Minecraft, Terraria, and Project Zomboid**! ***30%*** of your first purchase will support the development of Super Duper Vanilla!
+然后lod显示与vanilla chunk割裂，经过无数次测试后，终于搞清不能自己手搓魔法数字了，于是叫minimax去计算sdv的Lambert的具体公式，最后完美实现数学等同，光照效果终于相等。
 
-## Sponsored by Ember Host
-   [![Sponsor](/shaders/textures/sponsor1.png)](https://billing.ember.host/aff.php?aff=23)
-   This shader is sponsored by **Ember Host**. Open the image above or use the code [**SUPERFLAME**](https://billing.ember.host/aff.php?aff=23) to claim your discount to get ***10%*** off on your first purchase!
+但此时边界雾阻挡voxy的视野，于是就经验公式，先调几千区块外，然后不管。
 
-   Choose **Ember Host** to host your Minecraft server and take advantage of their **powerful AMD processors** and go beyond with excellent prices! ***50%*** of your first purchase will support the development of Super Duper Vanilla!
+然而，lod 的阴影依旧是原版的Canopy Shadow，不计算太阳角度，极其不自然！实施卡了好久好久啊，反复推翻前面的修改方案，lightmap根本无法实现castshadow，最后终于想起去看photon的具体实现，于是发现ssss可以绕过csm与voxy握手，终于成功实现castshadow
 
-## Screenshots
-![2022-06-28_19 28 13](https://cdn.modrinth.com/data/LMIZZNxZ/images/bd57c68a400e0722bc7132575ea7cec66ca529ab.png)
-![2022-06-28_19 43 18](https://cdn.modrinth.com/data/LMIZZNxZ/images/1d38424b62d4461fae738019cbd1342145e9b4ac.png)
-![2022-06-28_19 49 58](https://cdn.modrinth.com/data/LMIZZNxZ/images/8edcb53225f8eeade023759c54df0916d9e3ff2a.png)
-![2022-07-04_20 31 16](https://cdn.modrinth.com/data/LMIZZNxZ/images/79de640c0254dd1f8ddf44052a79b57105a53f2c.png)
-![2022-07-04_20 36 15](https://cdn.modrinth.com/data/LMIZZNxZ/images/33a5e8c49e4a386c17a42ef48d96f240fa8e7d20.png)
-![2022-07-04_20 37 21](https://cdn.modrinth.com/data/LMIZZNxZ/images/f97e5cb26647bd487fae153b9942f87f373f7695.png)
-![2022-07-04_20 38 41](https://cdn.modrinth.com/data/LMIZZNxZ/images/7735240a7238b15b28dba555abf0cd03f798823a.png)
-![2022-07-04_20 40 49](https://cdn.modrinth.com/data/LMIZZNxZ/images/f643695cdd4ab9f7c95750fb8ff43f396cd16f6c.png)
-![2022-07-04_20 42 13](https://cdn.modrinth.com/data/LMIZZNxZ/images/8e152465e03a3861acf4a7be6eca82a86cf26f1a.png)
-![2022-07-04_20 49 54](https://cdn.modrinth.com/data/LMIZZNxZ/images/0126040f5bcc1828e2de2b059799ab7ffb3d08ec.png)
+但问题又来了，在lod与vanilla chunk（vc)的过渡区，当接受面是vanilla而遮挡物又是voxy时，阴影被截断。于是采纳gpt的方案，将阴影按 caster 来源分解，vanilla 接收面 = 原有 SDV CSM/Lambert × Voxy-only 遮蔽
 
-## License 
-   This shader uses the **FlameRender (C) Studios License**. See [**LICENSE**](LICENSE) for more info.
+Voxy 接收面    = SDV CSM × Voxy-only 遮蔽 × 原有 LOD 直接光。完美解决。
 
-## Contribution
-   If you plan to contribute to this project, see [**CONTRIBUTION**](CONTRIBUTION.md) for more info.
+然而问题又来了，lod与vc感觉又有区别，先怀疑是taa管线，sdv的taa处理非常简短，于是接入voxy。但差异依旧存在，肉眼多次观察法，发现是纹理不同。叫gpt生成了个纹理测试资源包，发现资源包纹理并没有变，于是叫gpt翻源码可得，voxy在处理草地纹理时固定翻转角度了，采用单次乘加哈希重新打乱草地的纹理旋转。收官。
 
-## Mod Compatibility
-   If you want to request mod compatibility with this shader, create an issue post in this repository with the mod that you want to enable compatibility via linking. If you're planning to add mod compatibility by coding it yourself, see [**CONTRIBUTION**](CONTRIBUTION.md).
+顺手还让gpt修复了sdv的发光浆果显示异常、雾的经验公式，湿润pbr的表面、雨天的Lambert变化，lod植被阴影。
 
-## Version Compatibility
-   Version compatibility varies across the 2 known shader loaders Iris and Optifine. Iris versions 1.6.10+ from Minecraft versions 1.18.2+ are compatible with this shader. For Optifine, it varies across GPU vendors. Please always choose the latest Iris or Optifine of your respective Minecraft version.
+最后就是水面效果攻坚战，先让gpt读取完整的sdv水面函数，再在lod有损的水面效果中，构造严格的mathematical equality，一轮对话直接实现。但问题来了，lod水面却依旧不跟vc等价，依旧更透明更亮！！完全摸不到头脑，然后突然想到，bsl似乎也是forward+deferred架构，进游戏测试发现lod与vc几乎完美等价，于是立马叫gpt去抄作业，然后发现voxy 输出的颜色用 BSL 自己的公式生成，根本不进入 vanilla G-buffer。但gpt额度用完了，干！
 
-   Optifine support will not be prioritized or maintained starting from version 1.3.7 of this shader.
+最后抄了photon的水面效果。目前个人使用非常满意。
 
-| Iris     | Windows, Linux (Intel, AMD, NVidia) | Apple (M1)      |
-| -------- | ----------------------------------- | --------------- |
-| 1.18.2+  | Supported                           | Supported       |
-| 1.17.1-  | Not supported                       | Not supported   |
+## 截图
 
-| Optifine | Windows, Linux (Intel, AMD, NVidia) | Apple (M1)      |
-| -------- | ----------------------------------- | --------------- |
-| 1.17.1+  | Partial support                     | Partial support |
-| 1.14.2+  | Partial support                     | Not supported   |
-| 1.13.2-  | Not supported                       | Not supported   |
+![](./docs/images/01_coastline.jpg)
+![](./docs/images/02_sunset.jpg)
+![](./docs/images/03_rain.jpg)
 
-## Releases
-   See all available releases [here](https://github.com/Eldeston/Super-Duper-Vanilla/releases). More recent builds are found in their corresponding branches, to download simply switch to the latest version branch, go to code (green button) and download as zip.
+## 目前仍存在以下问题
 
-   Latest build and pre-release versions are expected to be unstable, please report any issues or bugs anytime. Feedback is much appreciated.
+1.开启dungeon描边会导致lod与vanilla chunk边缘产生差异，肉眼可见，但不明显，将描边亮度降低至0.5即可。
 
-## Official CurseForge Page
-   Super Duper Vanilla just happens to be on CurseForge! Stable and latest releases will always be available there. Check it out [here](https://www.curseforge.com/minecraft/customization/super-duper-vanilla-shaders) and support me by using on one of the download links there!
+2.水下视角漏光（待修）
 
-## Super Duper Vanilla Installer
-   Alternatively, you can use this installer developed by [@steb-git](https://github.com/steb-git) allowing you to install either the release versions of SDV or the development versions. While the installer's task is relatively simple, it's still a WIP. [Use this link to go to the installer repository](https://github.com/steb-git/super-duper-vanilla-installer).
+3.使用了dFdx/dFdy/discard，derivatives 可能未定义,discard 未来也可能不受voxy支持
 
-## Social Links
-   Come join my Discord server to talk about other developments made by our studio-community!
-   * [Flamerender Studios Discord](https://discord.gg/UE85W5ynCg)
+## License
 
-   Or follow me on Twitter or subscribe to my Youtube channel to get updated with my recent developments and contents
-   * [@Eldeston's Twitter](https://twitter.com/eldeston)
-   * [@Eldeston's Channel](https://www.youtube.com/channel/UCQCkkFh25ydxZwCqpBhJJlg?view_as=subscriber)
-
-   You can become a supporter by doing any of the above, or donate through paypal
-   * [@Paypal donation](https://www.paypal.com/donate?hosted_button_id=4XLQ4WE296JKW)
+本项目是 Super Duper Vanilla 的 modified version,按 [FlameRender License 1.6](LICENSE) 分发。`shaders/lib/voxy/photonDistantWater.glsl` 衍生自 Photon 的水面设计,完整 Photon 许可证文本见 [PHOTON_LICENSE](PHOTON_LICENSE)。致谢与第三方代码归属见 [CREDITS.md](CREDITS.md)。
