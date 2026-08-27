@@ -1,0 +1,535 @@
+## Language format v1.1.0
+## All other .lang files must update to the latest language format version on this main .lang file
+
+## Profiles
+profile.comment = Changes performance profile to improve performance or quality
+
+profile.POTATO = Potato
+profile.LOW = Low
+profile.MEDIUM = Medium (Default)
+profile.HIGH = High
+profile.ULTRA = Ultra
+
+screen.DEBUG = Super Duper Vanilla v1.3.8
+screen.DEBUG.comment = §bDeveloped by §2Eldeston§f§r, presented by §9FlameRender (C) §9Studios. §eClick me to open shader debug settings! Contains color mode and noise speed options.
+    option.COLOR_MODE = Color mode
+    option.COLOR_MODE.comment = Changes albedo color mode.
+        value.COLOR_MODE.0 = OFF
+        value.COLOR_MODE.1 = White Mode
+        value.COLOR_MODE.2 = Black Mode
+        value.COLOR_MODE.3 = Foliage Mode
+
+    option.NOISE_SPEED = Noise speed
+    option.NOISE_SPEED.comment = Changes temporal noise speed
+
+screen.POST = Post
+screen.POST.comment = §6Post-processing effects such as outlines, anti-aliasing, retro filter, and image sharpening.
+    option.OUTLINES = Outlines
+    option.OUTLINES.comment = Enables outlines. Set to standard for classic outlined blocks, or Dungeons for Dungeons/SDGP styled outlines.
+        value.OUTLINES.0 = OFF
+        value.OUTLINES.1 = Standard
+        value.OUTLINES.2 = Dungeons
+
+    option.OUTLINE_BRIGHTNESS = Outline brightness
+    option.OUTLINE_BRIGHTNESS.comment = Outline brightness. Set it to -1 for black outlines, or 1 to highlighted outlines.
+
+    option.OUTLINE_PIXEL_SIZE = Outline pixel size
+    option.OUTLINE_PIXEL_SIZE.comment = Outline pixel size. Adjust to change the thickness of the outlines.
+
+    option.RETRO_FILTER = Retro filter
+    option.RETRO_FILTER.comment = Enable retro filter. Works best at low render quality.
+
+    option.ANTI_ALIASING = Anti aliasing
+    option.ANTI_ALIASING.comment = Enables anti-aliasing. FXAA is fast and works with screenshot sizes. TAA is slower, doesn't work with custom screenshots, but smooths noise. Disable anti-aliasing on your shader menu before using this feature!
+        value.ANTI_ALIASING.0 = OFF
+        value.ANTI_ALIASING.1 = FXAA
+        value.ANTI_ALIASING.2 = TAA
+        value.ANTI_ALIASING.3 = Lite TAA + FXAA
+
+    option.SHARPEN_FILTER = Sharpen filter
+    option.SHARPEN_FILTER.comment = Enables image sharpening. Use this with AA on if the image appears blurry.
+
+    screen.CAMERA = Camera settings
+    screen.CAMERA.comment = §6Camera and lens effects including depth of field, chromatic aberration, bloom, lens flare, vignette, and motion blur.
+        option.DOF = Depth of field
+        option.DOF.comment = Enables depth of field. Enables anti-aliasing for better results.
+
+        option.DOF_STRENGTH = Depth of field strength
+        option.DOF_STRENGTH.comment = Depth of field strength.
+
+        option.CHROMATIC_ABERRATION = Chromatic aberration
+        option.CHROMATIC_ABERRATION.comment = Enable chromatic aberration.
+
+        option.ABERRATION_PIXEL_SIZE = Aberration pixel size
+        option.ABERRATION_PIXEL_SIZE.comment = Chromatic aberration length. Increase for stronger effects.
+
+        option.BLOOM = Bloom
+        option.BLOOM.comment = Enables bloom.
+
+        option.BLOOM_STRENGTH = Bloom strength
+        option.BLOOM_STRENGTH.comment = Bloom brightness.
+
+        option.LENS_FLARE = Lens flare
+        option.LENS_FLARE.comment = Enables lens flare.
+
+        option.LENS_FLARE_STRENGTH = Lens flare strength
+        option.LENS_FLARE_STRENGTH.comment = Lens flare intensity.
+
+        option.VIGNETTE = Vignette
+        option.VIGNETTE.comment = Enables vignette.
+
+        option.VIGNETTE_STRENGTH = Vignette strength
+        option.VIGNETTE_STRENGTH.comment = Vignette intensity.
+
+        option.MOTION_BLUR = Motion blur
+        option.MOTION_BLUR.comment = Enable motion blur.
+
+        option.MOTION_BLUR_STRENGTH = Motion blur strength
+        option.MOTION_BLUR_STRENGTH.comment = Motion blur strength.
+
+    screen.TONEMAP = Tonemap settings
+    screen.TONEMAP.comment = §6Tonemapping and color grading controls such as contrast, saturation, exposure, and color tint.
+        option.CONTRAST = Contrast
+        option.CONTRAST.comment = Controls color contrast.
+
+        option.SATURATION = Saturation
+        option.SATURATION.comment = Controls how much color saturation.
+
+        option.WHITE_POINT = White point
+        option.WHITE_POINT.comment = Tonemap whitepoint.
+
+        option.SHOULDER_STRENGTH = Shoulder strength
+        option.SHOULDER_STRENGTH.comment = Tonemap shoulder strength.
+
+        option.AUTO_EXPOSURE = Auto exposure
+        option.AUTO_EXPOSURE.comment = Enables real time auto exposure. Does not work with custom Optifine screenshot resolutions!
+
+        option.AUTO_EXPOSURE_SPEED = Auto exposure speed
+        option.AUTO_EXPOSURE_SPEED.comment = Auto exposure temporal speed. Changes how fast or slow the auto exposure will adjust to the screen's exposure. Smaller values means slower, bigger values means faster.
+
+        option.EXPOSURE = Exposure
+        option.EXPOSURE.comment = Controls color exposure.
+
+        option.MINIMUM_EXPOSURE = Min exposure
+        option.MINIMUM_EXPOSURE.comment = Min auto exposure value. Lower values may increase exposure of dark scenes if auto exposure is on.
+
+        option.TINT_R = Red tint
+        option.TINT_R.comment = Red tint value.
+
+        option.TINT_G = Green tint
+        option.TINT_G.comment = Green tint value.
+
+        option.TINT_B = Blue tint
+        option.TINT_B.comment = Blue tint value.
+
+screen.LIGHTING = Lighting
+screen.LIGHTING.comment = §6Lighting and shadow options including shadow mapping, entity shadows, ambient lighting, and SSAO.
+    option.SHADOW_MAPPING = Shadowmapping
+    option.SHADOW_MAPPING.comment = Enables shadow mapping. Disable to use fake shadows with lightmap.
+
+    option.SHADOW_COLOR = Shadowmap color
+    option.SHADOW_COLOR.comment = Enables shadow color from colored transparent objects.
+
+    option.SHADOW_FILTER = Shadowmap filter
+    option.SHADOW_FILTER.comment = Enables soft shadow filtering, if enabled shadows will appear softer by using noise. May impact performance.
+
+    option.ENTITY_SHADOWS = Entity shadows
+    option.ENTITY_SHADOWS.comment = Enables entity shadows.
+
+    option.BLOCK_ENTITY_SHADOWS = Block entity shadows
+    option.BLOCK_ENTITY_SHADOWS.comment = Enables block entity shadows.
+
+    option.shadowMapResolution = Shadowmap resolution
+    option.shadowMapResolution.comment = Shadowmap resolution.
+
+    option.shadowDistance = Shadowmap distance
+    option.shadowDistance.comment = Shadowmap distance.
+
+    option.sunPathRotation = Light path angle
+    option.sunPathRotation.comment = Light path angle. This also affects sky angle.
+
+    option.UNDERWATER_CAUSTICS = Underwater caustics
+    option.UNDERWATER_CAUSTICS.comment = Enables underwater caustics. Shadow color must be enabled!
+        value.UNDERWATER_CAUSTICS.0 = OFF
+        value.UNDERWATER_CAUSTICS.1 = Underwater
+        value.UNDERWATER_CAUSTICS.2 = Full
+
+    option.SSAO = SSAO
+    option.SSAO.comment = Enables screenspace ambient occlusion.
+
+    option.AMBIENT_LIGHTING = Ambient lighting
+    option.AMBIENT_LIGHTING.comment = Overall ambient lighting value. Increase if you dislike the pitch black darkness, higher values may make lighting unrealistic. Set it to zero for a more realistic approach if you have SSGI enabled. Set it to 0.50 for nightvision.
+
+    screen.RAY_TRACING = Ray tracing settings
+    screen.RAY_TRACING.comment = §6Ray tracing features such as SSGI, SSR, raytracer steps, and rough reflections.
+        option.SSGI = SSGI
+        option.SSGI.comment = Enables screen space global illumination for more realistic indirect lighting.
+
+        option.SSR = SSR
+        option.SSR.comment = Enables screen space reflections for reflective surfaces like water and metals.
+
+        option.RAYTRACER_STEPS = Raytracer steps
+        option.RAYTRACER_STEPS.comment = Number of steps for ray tracing. Higher values increase quality but reduce performance.
+
+        option.RAYTRACER_BISTEPS = Raytracer refinement steps
+        option.RAYTRACER_BISTEPS.comment = Number of refinement steps for ray tracing. Improves detail in reflections and GI.
+
+        option.ROUGH_REFLECTIONS = Rough reflections
+        option.ROUGH_REFLECTIONS.comment = Enables rough reflections for non-mirror surfaces, simulating blurred reflections.
+
+        option.PREVIOUS_FRAME = Previous frame buffer
+        option.PREVIOUS_FRAME.comment = Uses previous frame data for temporal effects and denoising in ray tracing.
+
+screen.ATMOSPHERICS = Atmospherics
+screen.ATMOSPHERICS.comment = §6Atmospheric effects including sun/moon, clouds, fog, border fog, and volumetric lighting.
+    option.SUN_MOON_TYPE = Sun/moon type
+    option.SUN_MOON_TYPE.comment = Changes sun and moon type.
+        value.SUN_MOON_TYPE.0 = Default
+        value.SUN_MOON_TYPE.1 = Round
+        value.SUN_MOON_TYPE.2 = Vanilla
+    
+    option.CLOUD_TYPE = Cloud type
+    option.CLOUD_TYPE.comment = Changes cloud type.
+        value.CLOUD_TYPE.0 = Vanilla
+        value.CLOUD_TYPE.1 = Skybox
+        value.CLOUD_TYPE.2 = Volumetric
+
+    option.SUN_MOON_INTENSITY = Sun/moon intensity
+    option.SUN_MOON_INTENSITY.comment = The sun or moon's intensity. Also affects specular reflections.
+
+    option.VOLUMETRIC_LIGHTING = Volumetric lighting
+    option.VOLUMETRIC_LIGHTING.comment = Enables volumetric lighting.
+
+    option.VOLUMETRIC_LIGHTING_STRENGTH = Volumetric lighting strength
+    option.VOLUMETRIC_LIGHTING_STRENGTH.comment = The strength of volumetric lighting, set it to zero to disable it.
+
+    option.BORDER_FOG = Border fog
+    option.BORDER_FOG.comment = Enables border fog to cover world edges.
+
+    option.GROUND_FOG_STRENGTH = Ground fog strength
+    option.GROUND_FOG_STRENGTH.comment = The strength of mist/ground fog.
+
+    screen.CLOUD_SETTINGS = Cloud settings
+    screen.CLOUD_SETTINGS.comment = §eCloud rendering options such as double layered clouds, dynamic clouds, and cloud quality/depth.
+        option.DOUBLE_LAYERED_CLOUDS = Double layered clouds
+        option.DOUBLE_LAYERED_CLOUDS.comment = Adds another layer of clouds (works on both vanilla and shader clouds), may use up performance.
+
+        option.DYNAMIC_CLOUDS = Dynamic clouds
+        option.DYNAMIC_CLOUDS.comment = Makes clouds more dynamic and allows weather to affect it. (affects on both vanilla and story mode clouds).
+
+        option.FADE_SPEED = Fade speed
+        option.FADE_SPEED.comment = Cloud fade speed.
+
+        option.SECOND_CLOUD_HEIGHT = 2nd cloud height
+        option.SECOND_CLOUD_HEIGHT.comment = 2nd layer cloud height, if double vanilla clouds is on.
+
+        option.VOLUMETRIC_CLOUD_STEPS = Volumetric steps
+        option.VOLUMETRIC_CLOUD_STEPS.comment = Story mode clouds steps. Increasing may improve quality and demand more performance.
+
+        option.VOLUMETRIC_CLOUD_DEPTH = Volumetric depth
+        option.VOLUMETRIC_CLOUD_DEPTH.comment = Determines the story mode clouds' thickness.
+
+        option.SKYBOX_CLOUD_STEPS = Skybox steps
+        option.SKYBOX_CLOUD_STEPS.comment = Story mode clouds steps. Increasing may improve quality and demand more performance.
+
+        option.SKYBOX_CLOUD_DEPTH = Skybox depth
+        option.SKYBOX_CLOUD_DEPTH.comment = Determines the story mode clouds' thickness.
+
+    option.SKYBOX_BRIGHTNESS = Skybox brightness
+    option.SKYBOX_BRIGHTNESS.comment = Sky box brightness.
+
+screen.WORLD = World
+screen.WORLD.comment = §6World animation and environment options including terrain, water, weather, wind, and world curvature.
+    option.TERRAIN_ANIMATION = Terrain animation
+    option.TERRAIN_ANIMATION.comment = Enables terrain waving animation.
+
+    option.WATER_ANIMATION = Water animation
+    option.WATER_ANIMATION.comment = Enables water waving animation.
+
+    option.WEATHER_ANIMATION = Weather animation
+    option.WEATHER_ANIMATION.comment = Enables rain waving animation.
+
+    option.TIMELAPSE_MODE = Timelapse mode
+    option.TIMELAPSE_MODE.comment = Enable timelapse mode. This smoothens the transition of animations of the sky, the foliage waving etc according to current world time instead of frame time. Set to fragment for water normals and sky only and full for the water normals, sky, and waves. This feature does not work on vanilla clouds, skybox, and the sun and moon.
+        value.TIMELAPSE_MODE.0 = OFF
+        value.TIMELAPSE_MODE.1 = Fragment
+        value.TIMELAPSE_MODE.2 = Full
+
+    option.WIND_SPEED = Wind speed
+    option.WIND_SPEED.comment = Adjust wind speed. Affects plants, swinging objects, and weather. Increases the animation speed.
+
+    option.CURRENT_SPEED = Current speed
+    option.CURRENT_SPEED.comment = Adjust liquid and under water flow speed. Affects underwater plants and liquids. Increases the animation speed.
+
+    option.WIND_FREQUENCY = Wind frequency
+    option.WIND_FREQUENCY.comment = Adjust wind frequency. Affects plants, swinging objects, and weather. Increases the animation change frequency.
+
+    option.CURRENT_FREQUENCY = Current frequency
+    option.CURRENT_FREQUENCY.comment = Adjust liquid and under water flow frequency. Affects underwater plants and liquids. Increases the animation change frequency.
+
+    option.WORLD_CURVATURE = World curvature
+    option.WORLD_CURVATURE.comment = Enable world curvature.
+
+    option.WORLD_CURVATURE_SIZE = World curvature size
+    option.WORLD_CURVATURE_SIZE.comment = World curvature size.
+
+screen.PBR = PBR
+screen.PBR.comment = §6Physically based rendering options including PBR mode, specular highlights, environment materials, and parallax occlusion.
+    option.PBR_MODE = PBR mode
+    option.PBR_MODE.comment = Enables PBR. Integrated PBR depends on the vanilla albedo textures to map out the materials. Resource PBR uses your resource packs' PBR, if available. Resource PBR requires latest LabPBR version!
+        value.PBR_MODE.0 = OFF
+        value.PBR_MODE.1 = Integrated PBR
+        value.PBR_MODE.2 = Lab PBR 1.3
+
+    option.SPECULAR_HIGHLIGHTS = Specular highlights
+    option.SPECULAR_HIGHLIGHTS.comment = Enables specular highlight. Specular highlights are the approximate reflections of the sun.
+
+    option.ENVIRONMENT_PBR = Enviro PBR materials
+    option.ENVIRONMENT_PBR.comment = Enables environment materials. Environment materials affects your surrounding according to your environment such as rain.
+
+    option.SUBSURFACE_SCATTERING = Subsurface scattering
+    option.SUBSURFACE_SCATTERING.comment = Enables subsurface scattering.
+
+    option.EMISSIVE_INTENSITY = Emissive intensity
+    option.EMISSIVE_INTENSITY.comment = Emissive maps intensity. Does not affect lightmaps and requires PBR on.
+
+    option.NORMAL_STRENGTH = Normal strength
+    option.NORMAL_STRENGTH.comment = Normal map strength. Effective only if PBR is on with the RP normals, and slope normals is off.
+
+    option.SLOPE_NORMALS = Slope normals
+    option.SLOPE_NORMALS.comment = Enables slope normals. Disable this feature if you're using a high resolution pack with normal maps.
+
+    option.DIRECTIONAL_LIGHTMAPS = Directional lightmaps
+    option.DIRECTIONAL_LIGHTMAPS.comment = Enables directional lightmaps. Effective only if auto generated normals or normal maps from PBR is enabled.
+
+    option.DIRECTIONAL_LIGHTMAP_STRENGTH = Directional lightmaps strength
+    option.DIRECTIONAL_LIGHTMAP_STRENGTH.comment = Directional lightmap strength. Effective if directional lightmaps is enabled.
+
+    screen.POM_SETTINGS = Parallax occlusion settings
+    screen.POM_SETTINGS.comment = §eParallax occlusion mapping and shadowing options for enhanced surface detail.
+        option.PARALLAX_OCCLUSION = Parallax occlusion
+        option.PARALLAX_OCCLUSION.comment = Enables parallax occlusion mapping for simulated surface depth and detail.
+
+        option.PARALLAX_DEPTH = Parallax depth
+        option.PARALLAX_DEPTH.comment = Sets the maximum depth for parallax occlusion mapping. Higher values increase the effect.
+
+        option.PARALLAX_STEPS = Parallax steps
+        option.PARALLAX_STEPS.comment = Number of steps for parallax occlusion mapping. More steps improve quality but reduce performance.
+
+        option.PARALLAX_SHADOW = Parallax shadows
+        option.PARALLAX_SHADOW.comment = Enables self-shadowing for parallax occlusion mapped surfaces.
+
+        option.PARALLAX_SHADOW_STEPS = Parallax shadow steps
+        option.PARALLAX_SHADOW_STEPS.comment = Number of steps for parallax shadowing. Higher values improve shadow detail.
+
+    screen.IPBR_SETTINGS = iPBR settings
+    screen.IPBR_SETTINGS.comment = §eAdvanced material settings for water, lava, sculk, and normal generation.
+        screen.WATER_SETTINGS = Water material settings
+        screen.WATER_SETTINGS.comment = §bWater material properties such as noise, brightness, normal map, blur, depth, tiling, absorption, foam, and flat color.
+            option.WATER_NOISE = Water noise
+            option.WATER_NOISE.comment = Controls the amount of noise/distortion in water surfaces.
+
+            option.WATER_BRIGHTNESS = Water brightness
+            option.WATER_BRIGHTNESS.comment = Adjusts the brightness of water materials.
+
+            option.WATER_NORMAL = Water normalmap
+            option.WATER_NORMAL.comment = Enables or adjusts the normal map for water, affecting surface detail.
+
+            option.WATER_BLUR_SIZE = Water normalmap blur size
+            option.WATER_BLUR_SIZE.comment = Sets the blur radius for the water normal map, smoothing details.
+
+            option.WATER_DEPTH_SIZE = Water normalmap depth size
+            option.WATER_DEPTH_SIZE.comment = Controls the depth effect strength in the water normal map.
+
+            option.WATER_TILE_SIZE = Water tile size
+            option.WATER_TILE_SIZE.comment = Sets the tiling scale for water textures.
+
+            option.WATER_STYLIZE_ABSORPTION = Water absorption
+            option.WATER_STYLIZE_ABSORPTION.comment = Adjusts how much light is absorbed by water, affecting color and clarity.
+
+            option.WATER_FOAM = Water foam
+            option.WATER_FOAM.comment = Enables or adjusts foam effects on water surfaces.
+
+            option.WATER_FLAT = Flat water albedo
+            option.WATER_FLAT.comment = Uses a flat albedo color for water, ignoring texture details.
+
+        screen.LAVA_SETTINGS = Lava material settings
+        screen.LAVA_SETTINGS.comment = §bLava material properties such as brightness, noise, and tiling.
+            option.LAVA_BRIGHTNESS = Lava brightness
+            option.LAVA_BRIGHTNESS.comment = Adjusts the brightness of lava materials.
+
+            option.LAVA_NOISE = Lava noise
+            option.LAVA_NOISE.comment = Controls the amount of noise/distortion in lava surfaces.
+
+            option.LAVA_TILE_SIZE = Lava tile size
+            option.LAVA_TILE_SIZE.comment = Sets the tiling scale for lava textures.
+
+        screen.SCULK_SETTINGS = Sculk material settings
+        screen.SCULK_SETTINGS.comment = §bSculk material properties such as brightness, noise, and tiling.
+            option.SCULK_BRIGHTNESS = Sculk brightness
+            option.SCULK_BRIGHTNESS.comment = Adjusts the brightness of sculk materials.
+
+            option.SCULK_NOISE = Sculk noise
+            option.SCULK_NOISE.comment = Controls the amount of noise/distortion in sculk surfaces.
+
+            option.SCULK_TILE_SIZE = Sculk tile size
+            option.SCULK_TILE_SIZE.comment = Sets the tiling scale for sculk textures.
+
+        option.NORMAL_GENERATION = Auto gen normals
+        option.NORMAL_GENERATION.comment = Enables automatic generation of normal maps for materials.
+
+        option.NORMAL_GENERATION_RESOLUTION = Auto gen normal resolution
+        option.NORMAL_GENERATION_RESOLUTION.comment = Sets the resolution for automatically generated normal maps.
+
+screen.CONFIGURATION = Configuration
+screen.CONFIGURATION.comment = §6Dimension and environment configuration for overworld, nether, end, and fog settings.
+    screen.OVERWORLD_SETTINGS = Overworld settings
+    screen.OVERWORLD_SETTINGS.comment = §aOverworld lighting, sky, and fog color settings for day, night, and twilight.
+        screen.DAY_SETTINGS = Day settings
+        screen.DAY_SETTINGS.comment = §bDaytime light and sky color configuration.
+            option.LIGHT0_DR = Light red
+            option.LIGHT0_DR.comment = Red channel for day light color.
+            
+            option.LIGHT0_DG = Light green
+            option.LIGHT0_DG.comment = Green channel for day light color.
+            
+            option.LIGHT0_DB = Light blue
+            option.LIGHT0_DB.comment = Blue channel for day light color.
+            
+            option.LIGHT0_DI = Light intensity
+            option.LIGHT0_DI.comment = Intensity for day light color.
+
+            option.SKY0_DR = Sky red
+            option.SKY0_DR.comment = Red channel for day sky color.
+            
+            option.SKY0_DG = Sky green
+            option.SKY0_DG.comment = Green channel for day sky color.
+            
+            option.SKY0_DB = Sky blue
+            option.SKY0_DB.comment = Blue channel for day sky color.
+            
+            option.SKY0_DI = Sky intensity
+            option.SKY0_DI.comment = Intensity for day sky color.
+
+        screen.NIGHT_SETTINGS = Night settings
+        screen.NIGHT_SETTINGS.comment = §1Nighttime light and sky color configuration.
+            option.LIGHT0_NR = Light red
+            option.LIGHT0_NR.comment = Red channel for night light color.
+            
+            option.LIGHT0_NG = Light green
+            option.LIGHT0_NG.comment = Green channel for night light color.
+            
+            option.LIGHT0_NB = Light blue
+            option.LIGHT0_NB.comment = Blue channel for night light color.
+            
+            option.LIGHT0_NI = Light intensity
+            option.LIGHT0_NI.comment = Intensity for night light color.
+
+            option.SKY0_NR = Sky red
+            option.SKY0_NR.comment = Red channel for night sky color.
+            
+            option.SKY0_NG = Sky green
+            option.SKY0_NG.comment = Green channel for night sky color.
+            
+            option.SKY0_NB = Sky blue
+            option.SKY0_NB.comment = Blue channel for night sky color.
+            
+            option.SKY0_NI = Sky intensity
+            option.SKY0_NI.comment = Intensity for night sky color.
+
+        screen.TWILIGHT_SETTINGS = Twilight settings
+        screen.TWILIGHT_SETTINGS.comment = §dTwilight light and sky color configuration.
+            option.LIGHT0_TR = Light red
+            option.LIGHT0_TR.comment = Red channel for twilight light color.
+            
+            option.LIGHT0_TG = Light green
+            option.LIGHT0_TG.comment = Green channel for twilight light color.
+            
+            option.LIGHT0_TB = Light blue
+            option.LIGHT0_TB.comment = Blue channel for twilight light color.
+            
+            option.LIGHT0_TI = Light intensity
+            option.LIGHT0_TI.comment = Intensity for twilight light color.
+
+            option.SKY0_TR = Sky red
+            option.SKY0_TR.comment = Red channel for twilight sky color.
+            
+            option.SKY0_TG = Sky green
+            option.SKY0_TG.comment = Green channel for twilight sky color.
+            
+            option.SKY0_TB = Sky blue
+            option.SKY0_TB.comment = Blue channel for twilight sky color.
+            
+            option.SKY0_TI = Sky intensity
+            option.SKY0_TI.comment = Intensity for twilight sky color.
+
+        screen.FOG_SETTINGS0 = Fog settings
+        screen.FOG_SETTINGS0.comment = §7Fog density and color settings for the overworld.
+            option.FOG0_VERTICAL_DENSITY_D = Vertical density day
+            option.FOG0_VERTICAL_DENSITY_D.comment = Vertical fog density for day. Higher values = thinner fog at high altitudes, thicker at low.
+            
+            option.FOG0_VERTICAL_DENSITY_N = Vertical density night
+            option.FOG0_VERTICAL_DENSITY_N.comment = Vertical fog density for night.
+            
+            option.FOG0_VERTICAL_DENSITY_T = Vertical density twilight
+            option.FOG0_VERTICAL_DENSITY_T.comment = Vertical fog density for twilight.
+            
+            option.FOG0_TOTAL_DENSITY = Total density
+            option.FOG0_TOTAL_DENSITY.comment = Total fog density for overworld. Higher values = thicker fog.
+
+    screen.NETHER_SETTINGS = Nether settings
+    screen.NETHER_SETTINGS.comment = §cNether fog and sky color configuration.
+        option.FOGn1_VERTICAL_DENSITY = Vertical density
+        option.FOGn1_VERTICAL_DENSITY.comment = Vertical fog density for the Nether. Higher values = thinner fog at high altitudes, thicker at low.
+
+        option.FOGn1_TOTAL_DENSITY = Total density
+        option.FOGn1_TOTAL_DENSITY.comment = Total fog density for the Nether. Higher values = thicker fog.
+
+        option.WORLDn1_VANILLA_FOGCOLI = Sky intensity
+        option.WORLDn1_VANILLA_FOGCOLI.comment = Intensity for Nether vanilla fog color.
+
+    screen.END_SETTINGS = End settings
+    screen.END_SETTINGS.comment = §5End dimension light, sky, and fog color configuration.
+        option.LIGHT1_CR = Light red
+        option.LIGHT1_CR.comment = Red channel for End light color.
+
+        option.LIGHT1_CG = Light green
+        option.LIGHT1_CG.comment = Green channel for End light color.
+
+        option.LIGHT1_CB = Light blue
+        option.LIGHT1_CB.comment = Blue channel for End light color.
+
+        option.LIGHT1_CI = Light intensity
+        option.LIGHT1_CI.comment = Intensity for End light color.
+
+        option.SKY1_CR = Sky red
+        option.SKY1_CR.comment = Red channel for End sky color.
+
+        option.SKY1_CG = Sky green
+        option.SKY1_CG.comment = Green channel for End sky color.
+
+        option.SKY1_CB = Sky blue
+        option.SKY1_CB.comment = Blue channel for End sky color.
+
+        option.SKY1_CI = Sky intensity
+        option.SKY1_CI.comment = Intensity for End sky color.
+
+        option.FOG1_VERTICAL_DENSITY = Vertical density
+        option.FOG1_VERTICAL_DENSITY.comment = Vertical fog density for the End. Higher values = thinner fog at high altitudes, thicker at low.
+
+        option.FOG1_TOTAL_DENSITY = Total density
+        option.FOG1_TOTAL_DENSITY.comment = Total fog density for the End. Higher values = thicker fog.
+
+    screen.BLOCK_LIGHT_COLOR = Block light settings
+    screen.BLOCK_LIGHT_COLOR.comment = §eBlock light color and intensity configuration.
+        option.BLOCKLIGHT_R = Block light red
+        option.BLOCKLIGHT_R.comment = Red channel for block light color.
+
+        option.BLOCKLIGHT_G = Block light green
+        option.BLOCKLIGHT_G.comment = Green channel for block light color.
+
+        option.BLOCKLIGHT_B = Block light blue
+        option.BLOCKLIGHT_B.comment = Blue channel for block light color.
+
+        option.BLOCKLIGHT_I = Block light intensity
+        option.BLOCKLIGHT_I.comment = Intensity for block light color.

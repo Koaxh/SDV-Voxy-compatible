@@ -1,0 +1,43 @@
+FlameRender (C) Studios License
+Version 1.6, November 8, 2024
+
+Copyright (C) 2023 Eldeston
+All Rights Reserved unless otherwise explicitly stated.
+
+0. Definitions
+  0.1. "The license" and/or "this license" refers to the FlameRender (C) Studios License.
+
+  0.2. "The project" and/or "this project" refers to the files included with this license.
+
+  0.3. "Author" refers to the original creator of the project and its source code.
+
+  0.4. "User" and/or "users" refers to the people that use this project.
+
+  0.5. "Modpack" refers to a collection of unique projects represented as another unique project.
+
+  0.6. To "modify" means to adapt all or part of the project other than its exact copy. The resulting project is then called the "modified version" of the earlier project. The criteria for the modified version must meet the following conditions:
+    a. Adapted values or settings of the project are disqualified as the "modified version."
+    b. The "modified version" is visually and functionally distinct from the earlier project.
+
+1. Permissions
+  1.1. Users are allowed to modify this project for personal use.
+
+  1.2. Users are allowed to use this project for content creation.
+
+  1.3. Users are allowed to redistribute this project as part of a modpack under the following conditions:
+    a. The modpack includes a copy of this license and copyright notice.
+    b. The project and its author are visibly credited in the description of the modpack.
+
+  1.4. Users are allowed to redistribute this project as the modified version under the following conditions:
+    a. The modified version uses the same license as this project.
+    b. The modified version does not use "Super Duper Vanilla" in its name.
+    c. The modified version includes a copy of this license and copyright notice.
+    d. The project and its author are visibly credited in the description of the modified version.
+
+2. Denied cases
+  2.1. Users are not allowed to redistribute this project unless the case falls under sections 1.3 or 1.4 in this license.
+
+3. Disclaimers
+  3.1. THE PROJECT IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE PROJECT OR THE USE OR OTHER DEALINGS IN THE PROJECT.
+
+  3.3. This license and its terms are subject to change and review at any time by this project's author.
