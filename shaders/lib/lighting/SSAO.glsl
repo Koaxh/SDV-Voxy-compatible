@@ -72,10 +72,7 @@ float getVoxySSAO(in vec3 screenPos, in vec3 viewNormal){
         // is a valid sample surface here.
         if(vanillaSampleDepth >= 1.0 &&
             sampleDepth < 1.0 && samplePos.z > sampleDepth){
-            float sampleViewDepth = -getVoxyViewPos(
-                vxProjInv,
-                vec3(samplePos.xy, sampleDepth)
-            ).z;
+            float sampleViewDepth = -getVoxyViewDepth(vxProjInv, sampleDepth);
             occlusion -= 0.0625 / max(depthOrigin - sampleViewDepth, 1.0);
         }
     }

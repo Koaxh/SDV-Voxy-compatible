@@ -53,9 +53,11 @@ vec3 photonVoxyScreenToView(
     float ndcDepth = zeroToOneDepth
         ? screenDepth
         : screenDepth * 2.0 - 1.0;
-    vec4 homogeneousView = vxProjInv
-        * vec4(ndcXY, ndcDepth, 1.0);
-    return homogeneousView.xyz / homogeneousView.w;
+    float invW = 1.0 / (ndcDepth * vxProjInv[2][3] + vxProjInv[3][3]);
+    return vec3(
+        (ndcXY * vec2(vxProjInv[0][0], vxProjInv[1][1]) + vxProjInv[3].xy) * invW,
+        -invW
+    );
 }
 
 vec3 photonVoxyViewToScreen(
@@ -85,12 +87,13 @@ vec3 photonVanillaScreenToView(
     if (removeJitter) {
         ndcXY -= photonVoxyTaaJitterNdc();
     }
-    vec4 homogeneousView = gbufferProjectionInverse * vec4(
-        ndcXY,
-        screenDepth * 2.0 - 1.0,
-        1.0
+    float ndcZ = screenDepth * 2.0 - 1.0;
+    float invW = 1.0 / (ndcZ * gbufferProjectionInverse[2][3] + gbufferProjectionInverse[3][3]);
+    return vec3(
+        (ndcXY.x * gbufferProjectionInverse[0][0] + gbufferProjectionInverse[3][0]) * invW,
+        (ndcXY.y * gbufferProjectionInverse[1][1] + gbufferProjectionInverse[3][1]) * invW,
+        -invW
     );
-    return homogeneousView.xyz / homogeneousView.w;
 }
 
 mat4 photonCombinedProjection() {

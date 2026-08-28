@@ -42,7 +42,7 @@ bool isVoxySsrtOccluder(in vec3 rayPositionScreen) {
         depthSize - 1
     );
     float casterDepth = texelFetch(vxDepthTexOpaque, depthTexel, 0).r;
-    if (casterDepth >= 1.0) return false;
+    if (casterDepth >= 1.0 || casterDepth >= rayPositionScreen.z) return false;
 
     float rayDepthLinear = getVoxyLinearDepth(rayPositionScreen.z);
     float casterDepthLinear = getVoxyLinearDepth(casterDepth);
@@ -50,9 +50,8 @@ bool isVoxySsrtOccluder(in vec3 rayPositionScreen) {
 
     // Match Photon's SSRT slab test. A sampled surface must be in front of
     // the ray and within the 20-block interval centred on the tolerance.
-    return casterDepth < rayPositionScreen.z
-        && abs(VOXY_SSRT_DEPTH_TOLERANCE - depthDelta)
-            < VOXY_SSRT_DEPTH_TOLERANCE;
+    return abs(VOXY_SSRT_DEPTH_TOLERANCE - depthDelta)
+        < VOXY_SSRT_DEPTH_TOLERANCE;
 }
 
 float getVoxySsrtShadow(

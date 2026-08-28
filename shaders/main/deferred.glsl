@@ -90,56 +90,20 @@
         ivec2 screenTexelCoord = ivec2(gl_FragCoord.xy);
 
         #ifdef SSAO
-            #ifdef VOXY
-                vxDepthZeroToOne = int(
-                    texelFetch(colortex17, screenTexelCoord, 0).a >= 2.0
-                );
-            #endif
-            albedoDataOut = vec4(texelFetch(colortex2, screenTexelCoord, 0).rgb, 0.25);
-
-            // Declare and get positions
             float depth = texelFetch(depthtex0, screenTexelCoord, 0).x;
+            vec3 albedo = texelFetch(colortex2, screenTexelCoord, 0).rgb;
+            albedoDataOut = vec4(albedo, 0.25);
 
-            #ifdef VOXY
-                bool voxyLod = false;
-                if(depth == 1.0){
-                    float voxyDepth = texelFetch(vxDepthTexOpaque, screenTexelCoord, 0).x;
-                    if(voxyDepth < 1.0){
-                        depth = voxyDepth;
-                        voxyLod = true;
-                    }
-                }
-            #endif
+            // Sky (1.0), player hand (<= 0.56) and distant Voxy LODs (which maintain neutral 0.25 AO) return immediately
+            // Completely skips colortex1 (normal) fetch and 4-tap SSAO raymarch
+            if(depth == 1.0 || depth <= 0.56) return;
 
-            // If sky or player hand return immediately
-            #ifdef VOXY
-                if((!voxyLod && depth <= 0.56) || depth == 1.0) return;
-            #else
-                if(depth <= 0.56 || depth == 1.0) return;
-            #endif
-
-            // Check if sky and player hand
+            // Check if normal has a valid non-zero direction
             vec3 normal = texelFetch(colortex1, screenTexelCoord, 0).xyz;
+            if(dot(normal, normal) < 0.0001) return;
 
-            // Check if normal has a direction
-            if(normal.x + normal.y + normal.z == 0) return;
-
-            // Do SSAO
-            #ifdef VOXY
-                if(voxyLod){
-                    // SSAO on distant LOD voxels has sub-pixel sample radius (< 0.001px)
-                    // and is covered by atmospheric fog. Keep neutral AO (0.25) to save
-                    // 8 depth fetches and 4 matrix inversions per LOD pixel.
-                    albedoDataOut.w = 0.25;
-                } else {
-                    albedoDataOut.w = getSSAO(
-                        vec3(texCoord, depth),
-                        mat3(gbufferModelView) * normal
-                    );
-                }
-            #else
-                albedoDataOut.w = getSSAO(vec3(texCoord, depth), mat3(gbufferModelView) * normal);
-            #endif
+            // Do SSAO for near vanilla geometry
+            albedoDataOut.w = getSSAO(vec3(texCoord, depth), mat3(gbufferModelView) * normal);
         #else
             albedoDataOut = texelFetch(colortex2, screenTexelCoord, 0).rgb;
         #endif

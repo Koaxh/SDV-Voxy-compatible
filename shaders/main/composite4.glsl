@@ -22,11 +22,13 @@
 
     void main(){
         #ifdef BLOOM
-            // Get buffer texture coordinates
-            texCoord = gl_MultiTexCoord0.xy;
+            // Scale texture coordinates to fit the [0, 0.26] x [0, 0.39] bloom tile bounding box
+            texCoord = gl_MultiTexCoord0.xy * vec2(0.26, 0.39);
+            // Crop vertex quad to bloom tile bounding box so hardware rasterizer skips 89.86% of the screen
+            gl_Position = vec4(gl_Vertex.x * (2.0 * 0.26) - 1.0, gl_Vertex.y * (2.0 * 0.39) - 1.0, 0.0, 1.0);
+        #else
+            gl_Position = vec4(gl_Vertex.xy * 2.0 - 1.0, 0.0, 1.0);
         #endif
-
-        gl_Position = vec4(gl_Vertex.xy * 2.0 - 1.0, 0, 1);
     }
 #endif
 

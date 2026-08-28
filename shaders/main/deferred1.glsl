@@ -451,19 +451,60 @@
             vec3 voxyLightDirView = mat3(gbufferModelView)
                 * voxyLightDirWorld;
 
-            // Backface early-out: backfacing fragments (N.L <= 0) receive zero direct diffuse,
-            // so skip the 10-step SSRT depth raymarching completely.
-            float nDotL = dot(normal, voxyLightDirWorld);
-            if (nDotL > 0.0) {
-                vec3 voxyTraceViewPos = viewPos;
+            // =========================================================================
+            // MOD-5: SSRT Shadow Short-Circuit Gating (Corrected)
+            // Level 1: Geometric alignment — backfaces cannot receive direct sun
+            // Level 3: Active shadow fade strength (shdFade > 0.0)
+            //
+            // *** Level 2 ("skyLightFactor / cave detector") has been REMOVED ***
+            // The original implementation read matRaw0.y (colortex3.y) thinking it
+            // was the per-pixel sky-light factor. In SDV's gbuffer layout colortex3
+            // stores (metallic, smoothness, material_type). colortex3.y is therefore
+            // the material SMOOTHNESS, not sky light. Rough terrain (grass, stone,
+            // dirt) has smoothness ≈ 0, so skyLightFactor ≤ 0.01 was TRUE for
+            // virtually all surfaces, making receivesSunlight permanently false and
+            // stamping every terrain pixel as fully shadowed (0.0 history) → the
+            // entire world appeared dark/black.
+            //
+            // Cave detection is unnecessary here: Voxy LOD geometry is always
+            // outdoors (it is the distant-horizon mesh). For vanilla terrain pixels
+            // without Voxy LOD occluders above them, the SSRT ray travels to the
+            // horizon and correctly returns 1.0 (unoccluded) on its own.
+            // =========================================================================
+            //
+            // BUG FIX (previous round): colortex1 is the vanilla gbuffer normal.
+            // Voxy LOD does NOT write to colortex1, so voxyLod pixels had
+            // normal = vec3(0,0,0) → nDotL = 0 → every LOD surface stamped as
+            // fully shadowed. For voxyLod pixels we now use colortex17.xyz
+            // (voxyConvention, Voxy's own surface normal) with a fallback to the
+            // vanilla normal when colortex17.xyz is zero (opaque Voxy pixels write
+            // their normal into normalDataOut = colortex1 directly, so the fallback
+            // IS the correct Voxy normal for those pixels).
+            vec3 nDotLNormal = (voxyLod && dot(voxyConvention.xyz, voxyConvention.xyz) > 1e-4)
+                ? normalize(voxyConvention.xyz)
+                : normal;
+            float nDotL = dot(nDotLNormal, voxyLightDirWorld);
+
+            // Only Level 1 and Level 3 remain.
+            bool receivesSunlight = (nDotL > 0.0) && (shdFade > 0.0);
+
+            #ifndef FORCE_DISABLE_WEATHER
+                // Rain: wet surfaces scatter indirect light even on backfaces.
+                receivesSunlight = receivesSunlight || (rainStrength > 0.0 && shdFade > 0.0);
+            #endif
+
+            if (receivesSunlight) {
                 float lodShadow = getVoxySsrtShadow(
-                    voxyTraceViewPos,
+                    viewPos,
                     voxyLightDirView,
                     dither
                 );
                 voxyShadowOut = encodeVoxyShadowHistory(lodShadow);
             } else {
-                voxyShadowOut = encodeVoxyShadowHistory(0.0);
+                // Backface or night-time: no direct sun. Write 1.0 (no LOD
+                // occluder) so the shading equation's own nDotL term handles
+                // darkening without double-penalising through the shadow term.
+                voxyShadowOut = encodeVoxyShadowHistory(1.0);
             }
         #endif
 
@@ -494,7 +535,7 @@
 
         // Border fog
         #ifdef BORDER_FOG
-            fogFactor = (fogFactor - 1.0) * getBorderFog(viewDist) + 1.0;
+            fogFactor = (fogFactor - 1.0) * getBorderFog(viewDist, nEyePlayerPos.y) + 1.0;
         #endif
 
         // Apply fog and darkness fog

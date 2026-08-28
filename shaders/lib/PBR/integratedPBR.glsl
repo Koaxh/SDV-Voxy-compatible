@@ -16,21 +16,26 @@ void getPBR(inout dataPBR material, in int id){
     // Generate bumped normals
     #if (defined TERRAIN || defined WATER || defined BLOCK || defined BLOCK_TRANSLUCENT) && defined NORMAL_GENERATION
         if(id != 11100 && id != 11102 && id != 12101){
-            const float autoGenNormPixSize = 1.0 / NORMAL_GENERATION_RESOLUTION;
-            vec2 topRightCorner = fract(vTexCoord - autoGenNormPixSize) * vTexCoordScale + vTexCoordPos;
-            vec2 bottomLeftCorner = fract(vTexCoord + autoGenNormPixSize) * vTexCoordScale + vTexCoordPos;
+            // [MOD-3]: Single-sample tangent normal generation via UV Jacobian derivative mapping
+            float luma = dot(material.albedo.rgb, vec3(0.2126, 0.7152, 0.0722));
+            float dhdx = dFdx(luma);
+            float dhdy = dFdy(luma);
 
-            float d0 = sumOf(textureGrad(gtexture, topRightCorner, dcdx, dcdy).rgb);
-            float d1 = sumOf(textureGrad(gtexture, vec2(bottomLeftCorner.x, topRightCorner.y), dcdx, dcdy).rgb);
-            float d2 = sumOf(textureGrad(gtexture, vec2(topRightCorner.x, bottomLeftCorner.y), dcdx, dcdy).rgb);
+            float dudx = dcdx.x, dvdx = dcdx.y;
+            float dudy = dcdy.x, dvdy = dcdy.y;
+            float detJ = dudx * dvdy - dudy * dvdx;
 
-            vec2 slopeNormal = d0 - vec2(d1, d2);
-            // TBN * fastNormalize(vec3(slopeNormal, 1))
-            float lengthInv = inversesqrt(lengthSquared(slopeNormal) + 1.0);
-            material.normal = TBN * vec3(slopeNormal * lengthInv, lengthInv);
+            if (abs(detJ) > 1e-7) {
+                float invDet = 1.0 / detJ;
+                float dhdu = (dvdy * dhdx - dvdx * dhdy) * invDet;
+                float dhdv = (-dudy * dhdx + dudx * dhdy) * invDet;
 
-            // Calculate normal strength
-            material.normal = mix(TBN[2], material.normal, NORMAL_STRENGTH);
+                vec2 slope = clamp(vec2(dhdu, dhdv) * (1.0 / NORMAL_GENERATION_RESOLUTION), vec2(-2.0), vec2(2.0));
+                float lenInv = inversesqrt(dot(slope, slope) + 1.0);
+                vec3 tangentNormal = vec3(-slope * lenInv, lenInv);
+
+                material.normal = mix(TBN[2], fastNormalize(TBN * tangentNormal), NORMAL_STRENGTH);
+            }
         }
     #endif
 

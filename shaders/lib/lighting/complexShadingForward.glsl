@@ -84,26 +84,26 @@ vec3 complexShadingForward(in dataPBR material){
 					if(entityId == 10133) feetPlayerPos.y += 0.2;
 				#endif
 
-				// Get shadow pos
-				vec3 shdPos = vec3(shadowProjection[0].x, shadowProjection[1].y, shadowProjection[2].z) * (mat3(shadowModelView) * feetPlayerPos + shadowModelView[3].xyz);
-				shdPos.z += shadowProjection[3].z;
+				// [MOD-8]: Fused Shadow MVP transformation (eliminates separate scale/offset stages)
+				mat4 shadowMVP = shadowProjection * shadowModelView;
+				vec3 shdPos = mat3(shadowMVP) * feetPlayerPos + shadowMVP[3].xyz;
 
 				// Apply shadow distortion and transform to shadow screen space
 				shdPos = vec3(shdPos.xy / (length(shdPos.xy) * 2.0 + 0.2), shdPos.z * 0.1) + 0.5;
 
 				// Items that are not subject to depth do not need a bias
 				#if !defined HAND && !defined HAND_WATER
-					// Bias mutilplier, adjusts according to the current resolution
-					// The Z is instead a constant and the only extra bias that isn't accounted for is shadow distortion "blobs"
-					// 0.00006103515625 = exp2(-14)
-					const vec3 biasAdjustFactor = vec3(shadowMapPixelSize * 2.0, shadowMapPixelSize * 2.0, -0.00006103515625);
-
-					// Since we already have NLZ, we just need NLX and NLY to complete the shadow normal
+					// [MOD-8]: Slope-Scaled Depth Bias
 					float NLX = dot(material.normal, vec3(shadowModelView[0].x, shadowModelView[1].x, shadowModelView[2].x));
 					float NLY = dot(material.normal, vec3(shadowModelView[0].y, shadowModelView[1].y, shadowModelView[2].y));
+					vec3 shadowNormal = vec3(NLX, NLY, NLZ);
+
+					float slope = length(shadowNormal.xy) / max(abs(shadowNormal.z), 1e-4);
+					float slopeBiasZ = -0.00006103515625 * (1.0 + 1.5 * clamp(slope, 0.0, 4.0));
 
 					// Apply normal based bias
-					shdPos += vec3(NLX, NLY, NLZ) * biasAdjustFactor;
+					shdPos.xy += shadowNormal.xy * (shadowMapPixelSize * 2.0);
+					shdPos.z  += shadowNormal.z  * slopeBiasZ;
 				#endif
 
 				// Sample shadows

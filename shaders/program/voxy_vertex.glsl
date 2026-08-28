@@ -12,12 +12,8 @@ float sdvSinc(float value) {
 }
 
 vec3 voxy_transformVertex(VoxyVertexParameters parameters) {
-    if (parameters.customId != SDV_VERTEX_WATER_BLOCK_ID) {
-        return parameters.position;
-    }
-
     #ifdef WATER_ANIMATION
-    if (CURRENT_SPEED > 0) {
+    if (parameters.customId == SDV_VERTEX_WATER_BLOCK_ID && CURRENT_SPEED > 0) {
         vec2 quadDelta = parameters.quadMax.xz - parameters.quadMin.xz;
         vec2 phaseHalfExtent = quadDelta * (CURRENT_FREQUENCY * 0.5);
 

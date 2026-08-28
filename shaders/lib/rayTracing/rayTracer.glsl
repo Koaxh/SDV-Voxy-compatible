@@ -85,11 +85,10 @@ vec3 rayTraceScene(in vec3 screenPos, in vec3 viewPos, in vec3 rayDir, in float 
             // Preserve the original tracer's hand exclusion.
             if(vanillaDepth <= 0.56) return false;
 
-            // Fast 1D scalar depth remapping: eliminates 4x4 matrix-vector multiplication in loop
-            float ndcVanilla = vanillaDepth * 2.0 - 1.0;
-            float denom = ndcVanilla * gbufferProjectionInverse[2][3] + gbufferProjectionInverse[3][3];
-            float viewZ = gbufferProjectionInverse[3][2] / denom;
-            float voxyNdcDepth = -vxProj[2][2] - vxProj[3][2] / viewZ;
+            // Fast 1D scalar depth remapping: exact affine FMA mapping eliminates divisions in raymarch loop
+            float k1 = vxProj[3][2] * gbufferProjectionInverse[2][3];
+            float k0 = vxProj[3][2] * gbufferProjectionInverse[3][3] - vxProj[2][2];
+            float voxyNdcDepth = (2.0 * k1) * vanillaDepth + (k0 - k1);
 
             sceneDepth = vxDepthZeroToOne != 0
                 ? voxyNdcDepth

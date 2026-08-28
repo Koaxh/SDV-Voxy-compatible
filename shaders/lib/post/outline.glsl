@@ -5,24 +5,20 @@ float getVanillaOutline(
     in float depth2,
     in float depth3
 ){
+    float sumInv =
+        1.0 / (1.0 - depth0) +
+        1.0 / (1.0 - depth1) +
+        1.0 / (1.0 - depth2) +
+        1.0 / (1.0 - depth3);
+
+    float diff = sumInv - 4.0 / (1.0 - depthOrigin);
+
     #if OUTLINES == 1
-        float sumDepth =
-            near / (1.0 - depth0) +
-            near / (1.0 - depth1) +
-            near / (1.0 - depth2) +
-            near / (1.0 - depth3);
-
         // Preserve SDV's standard outline exactly for vanilla-only pixels.
-        return saturate(sumDepth - (near * 4.0) / (1.0 - depthOrigin));
+        return saturate(near * diff);
     #else
-        float sumDepth =
-            64.0 / (1.0 - depth0) +
-            64.0 / (1.0 - depth1) +
-            64.0 / (1.0 - depth2) +
-            64.0 / (1.0 - depth3);
-
         // Preserve SDV's dungeons outline exactly for vanilla-only pixels.
-        return saturate((1.0 - depthOrigin) * sumDepth - 256.0);
+        return saturate((64.0 * (1.0 - depthOrigin)) * diff);
     #endif
 }
 
@@ -31,22 +27,14 @@ float getVanillaOutline(
         float ndcDepth = isVoxyDepth
             ? getVoxyNdcDepth(depth)
             : depth * 2.0 - 1.0;
-        float viewZ;
 
-        // Only use the z/w coefficients of the already supplied inverse
-        // projections. This puts both depth owners into the same view-space
-        // block units without a matrix multiply or a raw-depth comparison.
-        if(isVoxyDepth){
-            float homogeneousZ = vxProjInv[2][2] * ndcDepth + vxProjInv[3][2];
-            float homogeneousW = vxProjInv[2][3] * ndcDepth + vxProjInv[3][3];
-            viewZ = homogeneousZ / homogeneousW;
-        } else {
-            float homogeneousZ = gbufferProjectionInverse[2][2] * ndcDepth + gbufferProjectionInverse[3][2];
-            float homogeneousW = gbufferProjectionInverse[2][3] * ndcDepth + gbufferProjectionInverse[3][3];
-            viewZ = homogeneousZ / homogeneousW;
-        }
+        // Since homogeneousZ is algebraically -1.0 for perspective inverse matrices,
+        // -viewZ simplifies to 1.0 / homogeneousW directly.
+        float homogeneousW = isVoxyDepth
+            ? vxProjInv[2][3] * ndcDepth + vxProjInv[3][3]
+            : gbufferProjectionInverse[2][3] * ndcDepth + gbufferProjectionInverse[3][3];
 
-        return max(-viewZ, 0.0001);
+        return max(1.0 / homogeneousW, 0.0001);
     }
 
     float getOutline(in ivec2 iUv, in float depthOrigin, in bool originIsVoxy){
@@ -119,12 +107,12 @@ float getVanillaOutline(
         float viewDepth1 = getOutlineViewDepth(depth1IsVoxy ? voxyDepth1 : depth1, depth1IsVoxy);
         float viewDepth2 = getOutlineViewDepth(depth2IsVoxy ? voxyDepth2 : depth2, depth2IsVoxy);
         float viewDepth3 = getOutlineViewDepth(depth3IsVoxy ? voxyDepth3 : depth3, depth3IsVoxy);
-        float sumDepth = viewDepth0 + viewDepth1 + viewDepth2 + viewDepth3;
+        float diffView = (viewDepth0 + viewDepth1 + viewDepth2 + viewDepth3) - viewDepthOrigin * 4.0;
 
         #if OUTLINES == 1
-            return saturate(sumDepth - viewDepthOrigin * 4.0);
+            return saturate(diffView);
         #else
-            return saturate(64.0 * sumDepth / viewDepthOrigin - 256.0);
+            return saturate((64.0 / viewDepthOrigin) * diffView);
         #endif
     }
 #else

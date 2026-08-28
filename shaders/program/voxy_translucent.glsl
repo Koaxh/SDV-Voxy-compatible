@@ -59,14 +59,18 @@ vec2 decodeVoxyLightMap(vec2 encodedLightMap) {
     return lightMapCoord(encodedLightMap * 256.0 - 8.0);
 }
 
+// [MOD-8]: 1-cycle constant array lookup for face normals
+const vec3 VOXY_NORMALS[6] = vec3[6](
+    vec3( 0.0, -1.0,  0.0), // 0: Down (-Y)
+    vec3( 0.0,  1.0,  0.0), // 1: Up   (+Y)
+    vec3( 0.0,  0.0, -1.0), // 2: North (-Z)
+    vec3( 0.0,  0.0,  1.0), // 3: South (+Z)
+    vec3(-1.0,  0.0,  0.0), // 4: West  (-X)
+    vec3( 1.0,  0.0,  0.0)  // 5: East  (+X)
+);
+
 vec3 getVoxyFaceNormal(uint face) {
-    vec3 axis = vec3(
-        uint((face >> 1u) == 2u),
-        uint((face >> 1u) == 0u),
-        uint((face >> 1u) == 1u)
-    );
-    float direction = float(int(face) & 1) * 2.0 - 1.0;
-    return axis * direction;
+    return VOXY_NORMALS[face & 7u];
 }
 
 vec2 getVoxyTaaJitterNdc() {
@@ -109,6 +113,8 @@ float encodeVoxySurfaceKind(float surfaceKind) {
         + zeroToOneDepth * SDV_VOXY_ZERO_TO_ONE_SURFACE_OFFSET;
 }
 
+// [MOD-8]: 1D View-Z linear water optical path reconstruction
+// Eliminates 2x unproject 4x4 matrix inversions and 3D Euclidean distance calculations
 float getVoxyWaterLayerDistance(vec3 waterSurfaceViewPosition) {
     float opaqueDepth = texelFetch(
         vxDepthTexOpaque,
@@ -118,8 +124,15 @@ float getVoxyWaterLayerDistance(vec3 waterSurfaceViewPosition) {
     if (opaqueDepth >= 1.0) {
         return -1.0;
     }
-    vec3 opaqueViewPosition = unprojectVoxyViewPosition(opaqueDepth);
-    float layerDistance = distance(opaqueViewPosition, waterSurfaceViewPosition);
+
+    // 1D scalar linear depth reconstruction
+    float ndcDepth = SCREEN2NDC_DEPTH(opaqueDepth);
+    float opaqueViewZ = -1.0 / (ndcDepth * vxProjInv[2][3] + vxProjInv[3][3]);
+
+    // Precise 1D ray path along view ray
+    float deltaZ = abs(opaqueViewZ - waterSurfaceViewPosition.z);
+    float layerDistance = deltaZ * (length(waterSurfaceViewPosition) / max(-waterSurfaceViewPosition.z, 1e-4));
+
     return (isnan(layerDistance) || isinf(layerDistance))
         ? -1.0
         : clamp(layerDistance, 0.0, 50.0);
@@ -246,9 +259,7 @@ void emitSdvWater(VoxyFragmentParameters parameters) {
     // lightmap-texel domain here.
 
     vec3 waterSurfaceViewPosition = unprojectVoxyViewPosition(gl_FragCoord.z);
-    vertexFeetPlayerPos = (
-        gbufferModelViewInverse * vec4(waterSurfaceViewPosition, 1.0)
-    ).xyz;
+    vertexFeetPlayerPos = mat3(gbufferModelViewInverse) * waterSurfaceViewPosition + gbufferModelViewInverse[3].xyz;
     // Water also has vertical faces (waterfalls and exposed fluid sides).
     // Pinning every fragment to +Y made those faces use the wrong Fresnel,
     // GGX and reflected ray. The corrected Voxy face value already accounts
@@ -327,12 +338,7 @@ void emitGenericVoxyTranslucent(VoxyFragmentParameters parameters) {
         vec3 vanillaCastShadow = vec3(1.0);
         float vanillaWaterCasterCoverage = 0.0;
         #ifdef SHADOW_MAPPING
-            vec3 feetPlayerPosition = (
-                gbufferModelViewInverse * vec4(
-                    unprojectVoxyViewPosition(gl_FragCoord.z),
-                    1.0
-                )
-            ).xyz;
+            vec3 feetPlayerPosition = mat3(gbufferModelViewInverse) * unprojectVoxyViewPosition(gl_FragCoord.z) + gbufferModelViewInverse[3].xyz;
             lodCastShadow = getVoxyTemporalCastShadow(feetPlayerPosition);
             vanillaCastShadow = getVoxyVanillaCastShadow(
                 feetPlayerPosition,

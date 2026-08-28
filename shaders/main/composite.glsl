@@ -243,7 +243,7 @@
             #include "/lib/surface/water.glsl"
         #endif
         #if defined WORLD_LIGHT && defined SPECULAR_HIGHLIGHTS
-            #include "/lib/lighting/GGX.glsl"
+        #include "/lib/lighting/GGX.glsl"
         #endif
         #include "/lib/voxy/photonDistantWater.glsl"
     #endif
@@ -251,155 +251,7 @@
     void main(){
         // Screen texel coordinates
         ivec2 screenTexelCoord = ivec2(gl_FragCoord.xy);
-
         vec3 matRaw0 = texelFetch(colortex3, screenTexelCoord, 0).xyz;
-
-        #ifdef VOXY
-            bool voxyLod = false;
-            vec4 voxyLayerColor = texelFetch(
-                colortex16,
-                screenTexelCoord,
-                0
-            );
-            vec4 voxyLayerSurface = texelFetch(
-                colortex17,
-                screenTexelCoord,
-                0
-            );
-            vec4 voxyLayerMaterial = texelFetch(
-                colortex19,
-                screenTexelCoord,
-                0
-            );
-            vec4 voxyWaterLayer = texelFetch(
-                colortex20,
-                screenTexelCoord,
-                0
-            );
-            vec3 voxyLayerAlbedo = voxyLayerMaterial.rgb;
-            bool voxyLayerZeroToOne =
-                voxyLayerSurface.a >= 2.0;
-            float voxyLayerSurfaceKind = voxyLayerSurface.a
-                - (voxyLayerZeroToOne ? 2.0 : 0.0);
-            // Use the projection matrix rather than the shared MRT marker.
-            // A stale marker collapses both LoD water thickness and LoD fog
-            // distance while leaving the surface/reflection visually valid.
-            vxDepthZeroToOne = int(getVoxyProjectionZeroToOne(
-                vxProj,
-                borderFar
-            ));
-            float voxyLayerAlpha = clamp(voxyLayerColor.a, 0.0, 1.0);
-            bool voxyTranslucentLayer = false;
-            bool voxyWater = false;
-            bool nativeWater = false;
-            bool resolvedWater = false;
-        #endif
-
-        bool realSky = false;
-
-        float depth = texelFetch(depthtex0, screenTexelCoord, 0).x;
-
-        #ifdef VOXY
-            // Native water overwrites the four raw-water attachments with MRT
-            // coverage alpha 1.  Its true thin alpha is negative meta.z; a
-            // zero value is valid when Photon suppresses the open-sky texture
-            // layer, so material + packet markers own detection instead.
-            nativeWater = depth < 1.0
-                && abs(matRaw0.z - 0.75) < 0.02
-                && voxyWaterLayer.a > 0.5
-                && voxyWaterLayer.z <= 0.0;
-            resolvedWater = nativeWater;
-        #endif
-
-        // Distant Horizons apparently uses a different depth texture
-        #ifdef DISTANT_HORIZONS
-            realSky = depth == 1;
-            if(realSky) depth = texelFetch(dhDepthTex0, screenTexelCoord, 0).x;
-        #elif defined VOXY
-            float voxyOpaqueDepth = texelFetch(
-                vxDepthTexOpaque,
-                screenTexelCoord,
-                0
-            ).x;
-            float voxyTranslucentDepth = texelFetch(
-                vxDepthTexTrans,
-                screenTexelCoord,
-                0
-            ).x;
-
-            // Native front depth owns the overlap, matching Photon's main LoD
-            // layer rule.  A native water packet is resolved below rather than
-            // entering SDV's old forward water BRDF.
-            voxyTranslucentLayer = depth == 1.0
-                && voxyLayerSurfaceKind > 0.1
-                && voxyTranslucentDepth < 1.0;
-            voxyWater = voxyTranslucentLayer
-                && voxyLayerSurfaceKind > 0.75
-                && voxyWaterLayer.z > 0.0;
-            resolvedWater = nativeWater || voxyWater;
-
-            if(voxyTranslucentLayer){
-                depth = voxyTranslucentDepth;
-                voxyLod = true;
-            } else if(depth == 1.0){
-                // Opaque post-processing must reconstruct the opaque surface,
-                // never the combined transparent depth.
-                if(voxyOpaqueDepth < 1.0){
-                    depth = voxyOpaqueDepth;
-                    voxyLod = true;
-                }
-            }
-        #endif
-
-        // Get screen pos
-        vec3 screenPos = vec3(texCoord, depth);
-
-        // Distant Horizons apparently uses a different projection matrix
-        #ifdef DISTANT_HORIZONS
-            vec3 viewPos = getViewPos(realSky ? dhProjectionInverse : gbufferProjectionInverse, screenPos);
-        #elif defined VOXY
-            vec3 viewPos;
-            if(voxyLod){
-                viewPos = photonVoxyScreenToView(
-                    screenPos.xy,
-                    screenPos.z,
-                    vxDepthZeroToOne != 0,
-                    true
-                );
-            } else if(nativeWater){
-                // depthtex0 is jittered.  Photon's layer calculations remove
-                // that offset before inverse projection; using SDV's generic
-                // helper here would reintroduce the former grazing-angle error.
-                viewPos = photonVanillaScreenToView(
-                    screenPos.xy,
-                    screenPos.z,
-                    true
-                );
-            } else {
-                viewPos = getViewPos(gbufferProjectionInverse, screenPos);
-            }
-        #else
-            vec3 viewPos = getViewPos(gbufferProjectionInverse, screenPos);
-        #endif
-
-        // Get eye player pos
-        vec3 eyePlayerPos = mat3(gbufferModelViewInverse) * viewPos;
-        // Voxy has a separate projection, not a separate view transform.
-        vec3 feetPlayerPos = eyePlayerPos + gbufferModelViewInverse[3].xyz;
-
-        // Get scene color
-        sceneColOut = texelFetch(colortex4, screenTexelCoord, 0).rgb;
-
-        #ifdef VOXY
-            if(voxyTranslucentLayer){
-                if(!voxyWater){
-                    // Non-water Voxy translucents retain the normal accumulated
-                    // premultiplied-alpha path.
-                    sceneColOut = sceneColOut * (1.0 - voxyLayerAlpha)
-                        + voxyLayerColor.rgb;
-                }
-            }
-        #endif
 
         #if ANTI_ALIASING >= 2
             vec3 dither = fract(getRng3(screenTexelCoord & 255) + frameFract);
@@ -407,285 +259,352 @@
             vec3 dither = getRng3(screenTexelCoord & 255);
         #endif
 
+        // Primary HDR scene color accumulator
+        sceneColOut = texelFetch(colortex4, screenTexelCoord, 0).rgb;
+
+        // Shared cross-scope geometric and shading variables
+        float depth = texelFetch(depthtex0, screenTexelCoord, 0).x;
+        bool realSky = false;
+        vec3 screenPos;
+        vec3 viewPos;
+        vec3 eyePlayerPos;
+        vec3 feetPlayerPos;
+        vec3 nEyePlayerPos;
+        vec3 nFeetPlayerPos;
+        float viewDist;
+        float viewDotInvSqrt;
+        float feetPlayerDist = 0.0;
+        float fogFactor;
+        float borderFog = 0.0;
+        bool isSky = false;
+
         #ifdef VOXY
-            if(resolvedWater){
-                // colortex17 RGB is overwritten by native water, but its alpha
-                // deliberately preserves the underlying Voxy clip convention.
-                // Native's own projection ignores this flag; Voxy back-depth
-                // fallback and combined SSR still require it.
-                bool waterZeroToOne = vxDepthZeroToOne != 0;
-                float reconstructedWaterLayerDistance = photonWaterLayerDistance(
-                    texCoord,
-                    viewPos,
-                    voxyWater,
-                    waterZeroToOne
-                );
-                // colortex19.a is written by the Voxy translucent pass from
-                // vxDepthTexOpaque while front and back still share Voxy's
-                // exact compile-time depth convention. Native water keeps the
-                // normal combined-depth reconstruction.
-                float waterLayerDistance = reconstructedWaterLayerDistance;
-                if(voxyWater
-                && voxyLayerMaterial.a >= 0.0
-                && photonWaterFinitePosition(vec3(voxyLayerMaterial.a))){
+            bool voxyLod = false;
+            bool voxyTranslucentLayer = false;
+            bool voxyWater = false;
+            bool nativeWater = false;
+            bool resolvedWater = false;
+            vec4 voxyLayerColor = vec4(0.0);
+            vec4 voxyLayerSurface = vec4(0.0);
+            vec4 voxyLayerMaterial = vec4(0.0);
+            vec4 voxyWaterLayer = vec4(0.0);
+            vec3 voxyLayerAlbedo = vec3(0.0);
+            float voxyLayerAlpha = 0.0;
+        #endif
+
+        // =========================================================================
+        // Scope 1: Position & Depth Reconstruction
+        // =========================================================================
+        {
+            #ifdef VOXY
+                voxyLayerColor = texelFetch(colortex16, screenTexelCoord, 0);
+                voxyLayerSurface = texelFetch(colortex17, screenTexelCoord, 0);
+                voxyLayerMaterial = texelFetch(colortex19, screenTexelCoord, 0);
+                voxyWaterLayer = texelFetch(colortex20, screenTexelCoord, 0);
+                voxyLayerAlbedo = voxyLayerMaterial.rgb;
+                bool voxyLayerZeroToOne = voxyLayerSurface.a >= 2.0;
+                float voxyLayerSurfaceKind = voxyLayerSurface.a - (voxyLayerZeroToOne ? 2.0 : 0.0);
+                vxDepthZeroToOne = int(getVoxyProjectionZeroToOne(vxProj, borderFar));
+                voxyLayerAlpha = clamp(voxyLayerColor.a, 0.0, 1.0);
+
+                nativeWater = depth < 1.0
+                    && abs(matRaw0.z - 0.75) < 0.02
+                    && voxyWaterLayer.a > 0.5
+                    && voxyWaterLayer.z <= 0.0;
+                resolvedWater = nativeWater;
+
+                float voxyOpaqueDepth = texelFetch(vxDepthTexOpaque, screenTexelCoord, 0).x;
+                float voxyTranslucentDepth = texelFetch(vxDepthTexTrans, screenTexelCoord, 0).x;
+
+                voxyTranslucentLayer = depth == 1.0
+                    && voxyLayerSurfaceKind > 0.1
+                    && voxyTranslucentDepth < 1.0;
+                voxyWater = voxyTranslucentLayer
+                    && voxyLayerSurfaceKind > 0.75
+                    && voxyWaterLayer.z > 0.0;
+                resolvedWater = nativeWater || voxyWater;
+
+                if(voxyTranslucentLayer){
+                    depth = voxyTranslucentDepth;
+                    voxyLod = true;
+                } else if(depth == 1.0){
+                    if(voxyOpaqueDepth < 1.0){
+                        depth = voxyOpaqueDepth;
+                        voxyLod = true;
+                    }
+                }
+            #elif defined DISTANT_HORIZONS
+                realSky = depth == 1.0;
+                if(realSky) depth = texelFetch(dhDepthTex0, screenTexelCoord, 0).x;
+            #endif
+
+            screenPos = vec3(texCoord, depth);
+            isSky = (depth == 1.0);
+
+            #ifdef DISTANT_HORIZONS
+                viewPos = getViewPos(realSky ? dhProjectionInverse : gbufferProjectionInverse, screenPos);
+            #elif defined VOXY
+                if(voxyLod){
+                    viewPos = photonVoxyScreenToView(screenPos.xy, screenPos.z, vxDepthZeroToOne != 0, true);
+                } else if(nativeWater){
+                    viewPos = photonVanillaScreenToView(screenPos.xy, screenPos.z, true);
+                } else {
+                    viewPos = getViewPos(gbufferProjectionInverse, screenPos);
+                }
+            #else
+                viewPos = getViewPos(gbufferProjectionInverse, screenPos);
+            #endif
+
+            eyePlayerPos = mat3(gbufferModelViewInverse) * viewPos;
+            feetPlayerPos = eyePlayerPos + gbufferModelViewInverse[3].xyz;
+
+            float viewDot = lengthSquared(viewPos);
+            viewDotInvSqrt = inversesqrt(viewDot);
+            viewDist = viewDot * viewDotInvSqrt;
+            nEyePlayerPos = eyePlayerPos * viewDotInvSqrt;
+
+            fogFactor = getFogFactor(viewDist, nEyePlayerPos.y, feetPlayerPos.y + cameraPosition.y);
+            #ifdef BORDER_FOG
+                borderFog = getBorderFog(viewDist, nEyePlayerPos.y);
+            #endif
+
+            #if defined WORLD_LIGHT || (!defined FORCE_DISABLE_CLOUDS && CLOUD_TYPE == 2)
+                float feetPlayerDot = lengthSquared(feetPlayerPos);
+                float feetPlayerDotInvSqrt = inversesqrt(feetPlayerDot);
+                feetPlayerDist = feetPlayerDot * feetPlayerDotInvSqrt;
+                nFeetPlayerPos = feetPlayerPos * feetPlayerDotInvSqrt;
+            #endif
+
+            #ifdef VOXY
+                if(voxyTranslucentLayer && !voxyWater){
+                    sceneColOut = sceneColOut * (1.0 - voxyLayerAlpha) + voxyLayerColor.rgb;
+                }
+            #endif
+        }
+
+        // =========================================================================
+        // Scope 2: Water Refraction & Translucent / Deferred Forward Shading
+        // =========================================================================
+        {
+            #ifdef VOXY
+                if(resolvedWater){
+                    bool waterZeroToOne = vxDepthZeroToOne != 0;
+                    float reconstructedWaterLayerDistance = photonWaterLayerDistance(
+                        texCoord,
+                        viewPos,
+                        voxyWater,
+                        waterZeroToOne
+                    );
+                    float waterLayerDistance = reconstructedWaterLayerDistance;
+                    if(voxyWater
+                    && voxyLayerMaterial.a >= 0.0
+                    && photonWaterFinitePosition(vec3(voxyLayerMaterial.a))){
+                        waterLayerDistance = clamp(
+                            voxyLayerMaterial.a,
+                            0.0,
+                            PHOTON_VOXY_MAX_WATER_DISTANCE
+                        );
+                    }
                     waterLayerDistance = clamp(
-                        voxyLayerMaterial.a,
+                        waterLayerDistance,
                         0.0,
                         PHOTON_VOXY_MAX_WATER_DISTANCE
                     );
+                    vec3 waterDirectionWorld = normalize(eyePlayerPos);
+                    vec3 waterWorldPosition = feetPlayerPos + cameraPosition;
+                    vec3 waterTransmittance;
+                    vec3 waterNormal;
+                    vec4 waterBody = drawPhotonWater(
+                        viewPos,
+                        waterWorldPosition,
+                        waterDirectionWorld,
+                        voxyLayerSurface.rgb,
+                        voxyLayerMaterial.rgb,
+                        voxyWaterLayer.xy,
+                        waterLayerDistance,
+                        dither.z,
+                        voxyWater,
+                        waterZeroToOne,
+                        waterTransmittance,
+                        waterNormal
+                    );
+
+                    vec3 waveDelta = waterNormal - voxyLayerSurface.rgb;
+                    vec3 viewWaveDelta = mat3(gbufferModelView) * waveDelta;
+                    float refractScale = (isEyeInWater == 1) ? 0.035 : 0.015;
+                    vec2 refractedCoord = clamp(texCoord + viewWaveDelta.xy * refractScale, vec2(0.001), vec2(0.999));
+
+                    sceneColOut = textureLod(colortex4, refractedCoord, 0).rgb;
+
+                    float thinSurfaceAlpha = nativeWater
+                        ? clamp(abs(voxyWaterLayer.z), 0.0, 1.0)
+                        : voxyLayerAlpha;
+
+                    sceneColOut = sceneColOut * waterTransmittance + waterBody.rgb;
+                    sceneColOut = sceneColOut * (1.0 - thinSurfaceAlpha) + voxyLayerColor.rgb;
                 }
-                waterLayerDistance = clamp(
-                    waterLayerDistance,
-                    0.0,
-                    PHOTON_VOXY_MAX_WATER_DISTANCE
-                );
-                vec3 waterDirectionWorld = normalize(eyePlayerPos);
-                vec3 waterWorldPosition = feetPlayerPos + cameraPosition;
-                vec3 waterTransmittance;
-				vec3 waterNormal;
-                vec4 waterBody = drawPhotonWater(
-                    viewPos,
-                    waterWorldPosition,
-                    waterDirectionWorld,
-                    voxyLayerSurface.rgb,
-                    voxyLayerMaterial.rgb,
-                    voxyWaterLayer.xy,
-                    waterLayerDistance,
-                    dither.z,
-                    voxyWater,
-                    waterZeroToOne,
-                    waterTransmittance,
-					waterNormal
-                );
-				 // Dynamic animated water wave refraction distortion on background scene
-                vec3 waveDelta = waterNormal - voxyLayerSurface.rgb;
-                vec3 viewWaveDelta = mat3(gbufferModelView) * waveDelta;
-				float refractScale = (isEyeInWater == 1) ? 0.035 : 0.015;
-                vec2 refractedCoord = clamp(texCoord + viewWaveDelta.xy * refractScale, vec2(0.001), vec2(0.999));
-				
+            #endif
 
-                sceneColOut = textureLod(colortex4, refractedCoord, 0).rgb;
-
-                float thinSurfaceAlpha = nativeWater
-                    ? clamp(abs(voxyWaterLayer.z), 0.0, 1.0)
-                    : voxyLayerAlpha;
-
-
-                sceneColOut = sceneColOut * waterTransmittance
-                    + waterBody.rgb;
-                sceneColOut = sceneColOut * (1.0 - thinSurfaceAlpha)
-                    + voxyLayerColor.rgb;
-            }
-        #endif
-
-        // Get view distance
-        float viewDot = lengthSquared(viewPos);
-        float viewDotInvSqrt = inversesqrt(viewDot);
-        float viewDist = viewDot * viewDotInvSqrt;
-
-        // Get normalized eyePlayerPos
-        vec3 nEyePlayerPos = eyePlayerPos * viewDotInvSqrt;
-        float fogFactor = getFogFactor(viewDist, nEyePlayerPos.y, feetPlayerPos.y + cameraPosition.y);
-
-        // Border fog
-        #ifdef BORDER_FOG
-            float borderFog = getBorderFog(viewDist);
-        #else
-            float borderFog = 0.0;
-        #endif
-
-        // If the object renders after deferred apply separate lighting. Voxy
-        // translucents use dedicated data because writing colortex1/2/3 during
-        // CUTOUT made deferred1 shade LOD water once before reaching this pass.
-        bool forwardMaterial = matRaw0.z > 0 && matRaw0.z < 1;
-        #ifdef VOXY
-            forwardMaterial = forwardMaterial || voxyTranslucentLayer;
-        #endif
-        if(forwardMaterial){
-            // Declare and get materials
-            vec3 albedo;
-            vec3 normal;
-            float materialMetallic;
-            float materialSmoothness;
-
+            bool forwardMaterial = matRaw0.z > 0.0 && matRaw0.z < 1.0;
             #ifdef VOXY
-                if(voxyTranslucentLayer){
-                    albedo = voxyLayerAlbedo;
-                    normal = voxyLayerSurface.rgb;
-                    materialMetallic = 0.02;
-                    materialSmoothness = voxyWater ? 0.96 : 0.5;
-                } else {
+                forwardMaterial = forwardMaterial || voxyTranslucentLayer;
+            #endif
+            if(forwardMaterial){
+                vec3 albedo;
+                vec3 normal;
+                float materialMetallic;
+                float materialSmoothness;
+
+                #ifdef VOXY
+                    if(voxyTranslucentLayer){
+                        albedo = voxyLayerAlbedo;
+                        normal = voxyLayerSurface.rgb;
+                        materialMetallic = 0.02;
+                        materialSmoothness = voxyWater ? 0.96 : 0.5;
+                    } else {
+                        albedo = texelFetch(colortex2, screenTexelCoord, 0).rgb;
+                        normal = texelFetch(colortex1, screenTexelCoord, 0).xyz;
+                        materialMetallic = matRaw0.x;
+                        materialSmoothness = matRaw0.y;
+                    }
+                #else
                     albedo = texelFetch(colortex2, screenTexelCoord, 0).rgb;
                     normal = texelFetch(colortex1, screenTexelCoord, 0).xyz;
                     materialMetallic = matRaw0.x;
                     materialSmoothness = matRaw0.y;
-                }
-            #else
-                albedo = texelFetch(colortex2, screenTexelCoord, 0).rgb;
-                normal = texelFetch(colortex1, screenTexelCoord, 0).xyz;
-                materialMetallic = matRaw0.x;
-                materialSmoothness = matRaw0.y;
-            #endif
-
-            // Apply deffered shading
-            vec3 viewNormal = mat3(gbufferModelView) * normal;
-            #ifdef VOXY
-                // The unified Photon resolver already owns RGB extinction,
-                // waves, direct highlight, combined-depth SSR/sky reflection
-                // and Fresnel for both native and Voxy water.  Never shade it a
-                // second time through SDV's unrelated deferred BRDF.
-                if(!resolvedWater){
-                    sceneColOut = complexShadingDeferred(sceneColOut, screenPos, viewPos, viewNormal, albedo, dither, viewDotInvSqrt, materialMetallic, materialSmoothness, realSky, voxyLod);
-                }
-            #else
-                sceneColOut = complexShadingDeferred(sceneColOut, screenPos, viewPos, viewNormal, albedo, dither, viewDotInvSqrt, materialMetallic, materialSmoothness, realSky);
-            #endif
-
-            // Get basic sky fog color
-            vec3 fogSkyCol = getSkyFogRender(nEyePlayerPos);
-
-            // Border fog
-            #ifdef BORDER_FOG
-                fogFactor = (fogFactor - 1.0) * borderFog + 1.0;
-            #endif
-
-            // Apply fog and darkness fog
-            sceneColOut = ((fogSkyCol - sceneColOut) * fogFactor
-                + sceneColOut) * getFogEffectFactor(viewDist);
-        }
-
-        // Apply darkness pulsing effect
-        sceneColOut *= 1.0 - darknessLightFactor;
-
-        #if defined WORLD_LIGHT || !defined FORCE_DISABLE_CLOUDS && CLOUD_TYPE == 2
-            bool isSky = depth == 1.0;
-
-            float feetPlayerDot = lengthSquared(feetPlayerPos);
-            float feetPlayerDotInvSqrt = inversesqrt(feetPlayerDot);
-            float feetPlayerDist = feetPlayerDot * feetPlayerDotInvSqrt;
-
-            vec3 nFeetPlayerPos = feetPlayerPos * feetPlayerDotInvSqrt;
-        #endif
-		
-        if (isEyeInWater == 1) {
-            // Dense underwater volumetric ambient haze (creates realistic aquatic depth and density)
-            float waterHaze = 1.0 - exp(-feetPlayerDist * 0.028);
-            vec3 waterFogLinear = toLinear(clamp(fogColor, vec3(0.0), vec3(1.0))) * vec3(0.8, 1.25, 0.95);
-            vec3 waterAmbient = (skyCol * vec3(0.7, 1.15, 0.9) + toLinear(AMBIENT_LIGHTING + nightVision * 0.5)) * eyeBrightFact + lightCol * vec3(0.15, 0.32, 0.25) * eyeBrightFact;
-            vec3 waterBodyColor = waterFogLinear * waterAmbient * 2.5;
-            sceneColOut = mix(sceneColOut, waterBodyColor, waterHaze);
-        }
-
-        #ifdef WORLD_LIGHT
-            // Apply volumetric light
-            if(VOLUMETRIC_LIGHTING_STRENGTH != 0 && isEyeInWater != 2)
-                sceneColOut += getVolumetricLight(nFeetPlayerPos, feetPlayerDist, fogFactor, borderFog, dither.x, isSky);
-        #endif
-
-        #if !defined FORCE_DISABLE_CLOUDS && CLOUD_TYPE == 2
-            bool isCloudSky = isSky;
-            float cloudFeetPlayerDist = feetPlayerDist;
-
-            // When viewing through water (or underwater), translucent water surface
-            // should not occlude clouds behind it. Use solid depth (depthtex1/vxDepthTexOpaque)
-            // for cloud occlusion.
-            #ifdef VOXY
-                float solidDepthVanilla = texelFetch(depthtex1, screenTexelCoord, 0).x;
-                float solidDepthVoxy = texelFetch(vxDepthTexOpaque, screenTexelCoord, 0).x;
-                bool solidSky = solidDepthVanilla >= 1.0 && solidDepthVoxy >= 1.0;
-                if(resolvedWater || isEyeInWater == 1){
-                    if(solidSky){
-                        isCloudSky = true;
-                    } else if(solidDepthVanilla < 1.0){
-                        vec3 solidViewPos = getViewPos(gbufferProjectionInverse, vec3(texCoord, solidDepthVanilla));
-                        vec3 solidFeetPos = mat3(gbufferModelViewInverse) * solidViewPos + gbufferModelViewInverse[3].xyz;
-                        cloudFeetPlayerDist = length(solidFeetPos);
-                    }
-                }
-            #else
-                float solidDepthVanilla = texelFetch(depthtex1, screenTexelCoord, 0).x;
-                if(isEyeInWater == 1 || depth < 1.0){
-                    if(solidDepthVanilla >= 1.0){
-                        isCloudSky = true;
-                    } else {
-                        vec3 solidViewPos = getViewPos(gbufferProjectionInverse, vec3(texCoord, solidDepthVanilla));
-                        vec3 solidFeetPos = mat3(gbufferModelViewInverse) * solidViewPos + gbufferModelViewInverse[3].xyz;
-                        cloudFeetPlayerDist = length(solidFeetPos);
-                    }
-                }
-            #endif
-
-            #ifdef VOXY
-                // Voxy reports chunks; convert once to blocks and retain SDV's
-                // original rain contraction. This replaces the vanilla-far
-                // ceiling that clipped clouds before the LOD scene edge.
-                float cloudRenderDistance = getSceneRenderDistance();
-                #ifndef FORCE_DISABLE_WEATHER
-                    cloudRenderDistance *= 1.0 - rainStrength * 0.5;
                 #endif
-            #else
-                float cloudRenderDistance = volumetricCloudFar;
-            #endif
 
-            // Get the 1st layer of volumetric clouds position
-            // Note that the clouds needs to move westward just as in vanilla
-            vec3 cloudStartPos0 = vec3(cameraPosition.x + fragmentFrameTime, cameraPosition.y - volumetricCloudHeight, cameraPosition.z);
-			
-			vec3 cloudRayDir = nFeetPlayerPos;
-            if(resolvedWater || isEyeInWater == 1){
-                #ifdef WATER_NORMAL
-                    vec2 waveNorm = H2NWater((feetPlayerPos.xz + cameraPosition.xz) * waterTileSizeInv).xy;
-                    cloudRayDir = normalize(nFeetPlayerPos + vec3(waveNorm.x, 0.0, waveNorm.y) * 0.2);
+                vec3 viewNormal = mat3(gbufferModelView) * normal;
+                #ifdef VOXY
+                    if(!resolvedWater){
+                        sceneColOut = complexShadingDeferred(sceneColOut, screenPos, viewPos, viewNormal, albedo, dither, viewDotInvSqrt, materialMetallic, materialSmoothness, realSky, voxyLod);
+                    }
+                #else
+                    sceneColOut = complexShadingDeferred(sceneColOut, screenPos, viewPos, viewNormal, albedo, dither, viewDotInvSqrt, materialMetallic, materialSmoothness, realSky);
                 #endif
+
+                vec3 fogSkyCol = getSkyFogRender(nEyePlayerPos);
+                #ifdef BORDER_FOG
+                    fogFactor = (fogFactor - 1.0) * borderFog + 1.0;
+                #endif
+
+                sceneColOut = ((fogSkyCol - sceneColOut) * fogFactor + sceneColOut) * getFogEffectFactor(viewDist);
             }
+        }
 
-            // Get the volumetric clouds
-                        vec2 cloudData = volumetricClouds(cloudRayDir, cloudStartPos0, cloudFeetPlayerDist, cloudRenderDistance, dither.x, isCloudSky);
-
-            #ifdef DOUBLE_LAYERED_CLOUDS
-                // Get the 2nd layer of volumetric clouds position by reusing the 1st layer's position
-                vec3 cloudStartPos1 = vec3(cloudStartPos0.x, cloudStartPos0.y - SECOND_CLOUD_HEIGHT, cloudStartPos0.z);
-
-                // Variate by swizzling the 2 cloud channels
-                cloudData = max(volumetricClouds(cloudRayDir, cloudStartPos1, cloudFeetPlayerDist, cloudRenderDistance, dither.x, isCloudSky).yx, cloudData);
-            #endif
-
-            #ifdef DYNAMIC_CLOUDS
-                float fadeTime = saturate(sin(fragmentFrameTime * FADE_SPEED) * 0.8 + 0.5);
-
-                float cloudFinal = mix(mix(cloudData.x, cloudData.y, fadeTime), max(cloudData.x, cloudData.y), rainStrength) * 0.125;
-            #else
-                float cloudFinal = mix(cloudData.x, max(cloudData.x, cloudData.y), rainStrength) * 0.125;
-            #endif
-
-            vec3 rawCloudCol;
-            #ifdef FORCE_DISABLE_DAY_CYCLE
-                rawCloudCol = (toLinear(nightVision * 0.5 + AMBIENT_LIGHTING) + lightningFlash) + lightCol + skyCol;
-            #else
-                rawCloudCol = (toLinear(nightVision * 0.5 + AMBIENT_LIGHTING) + lightningFlash) + mix(moonCol, sunCol, dayCycleAdjust) + skyCol;
-            #endif
+        // =========================================================================
+        // Scope 3: Underwater Ambient Fog & Optical Absorption
+        // =========================================================================
+        {
+            sceneColOut *= 1.0 - darknessLightFactor;
 
             if (isEyeInWater == 1) {
-                // Snell's window fade: clouds only visible through Snell's window looking upwards
-                float snellFade = saturate(nFeetPlayerPos.y * 1.8 - 0.2);
-                float waterDepth = clamp(feetPlayerDist, 1.0, 45.0);
-                const vec3 waterExt = vec3(0.36, 0.085, 0.042);
-                vec3 waterTrans = exp(-waterExt * waterDepth);
-                vec3 waterFogCol = toLinear(clamp(fogColor, vec3(0.0), vec3(1.0))) * vec3(0.8, 1.25, 0.95);
-                vec3 waterTint = normalize(waterFogCol + vec3(0.02, 0.32, 0.26));
-                float cloudLum = max(rawCloudCol.r, max(rawCloudCol.g, rawCloudCol.b));
-                vec3 submergedCloudCol = mix(rawCloudCol * waterTrans, waterTint * cloudLum, clamp(waterDepth * 0.08, 0.3, 0.95));
-                
-                // Deep water extinction: as the player dives deeper, clouds naturally fade away into deep ocean water fog
-                float depthCloudFade = exp(-waterDepth * 0.08);
-                sceneColOut = mix(sceneColOut, submergedCloudCol, cloudFinal * snellFade * depthCloudFade);
-            } else {
-                sceneColOut = mix(sceneColOut, rawCloudCol, cloudFinal);
-			
+                float waterHaze = 1.0 - exp(-feetPlayerDist * 0.028);
+                vec3 waterFogLinear = toLinear(clamp(fogColor, vec3(0.0), vec3(1.0))) * vec3(0.8, 1.25, 0.95);
+                vec3 waterAmbient = (skyCol * vec3(0.7, 1.15, 0.9) + toLinear(AMBIENT_LIGHTING + nightVision * 0.5)) * eyeBrightFact + lightCol * vec3(0.15, 0.32, 0.25) * eyeBrightFact;
+                vec3 waterBodyColor = waterFogLinear * waterAmbient * 2.5;
+                sceneColOut = mix(sceneColOut, waterBodyColor, waterHaze);
             }
-        #endif
+        }
+
+        // =========================================================================
+        // Scope 4: Volumetric Lighting & Dual-Layer Volumetric Clouds
+        // =========================================================================
+        {
+            #ifdef WORLD_LIGHT
+                if(VOLUMETRIC_LIGHTING_STRENGTH != 0 && isEyeInWater != 2 && max(lightCol.r, max(lightCol.g, lightCol.b)) > 0.0001){
+                    sceneColOut += getVolumetricLight(nFeetPlayerPos, feetPlayerDist, fogFactor, borderFog, dither.x, isSky);
+                }
+            #endif
+
+            #if !defined FORCE_DISABLE_CLOUDS && CLOUD_TYPE == 2
+                bool isCloudSky = isSky;
+                float cloudFeetPlayerDist = feetPlayerDist;
+
+                #ifdef VOXY
+                    float solidDepthVanilla = texelFetch(depthtex1, screenTexelCoord, 0).x;
+                    float solidDepthVoxy = texelFetch(vxDepthTexOpaque, screenTexelCoord, 0).x;
+                    bool solidSky = solidDepthVanilla >= 1.0 && solidDepthVoxy >= 1.0;
+                    if(resolvedWater || isEyeInWater == 1){
+                        if(solidSky){
+                            isCloudSky = true;
+                        } else if(solidDepthVanilla < 1.0){
+                            vec3 solidViewPos = getViewPos(gbufferProjectionInverse, vec3(texCoord, solidDepthVanilla));
+                            vec3 solidFeetPos = mat3(gbufferModelViewInverse) * solidViewPos + gbufferModelViewInverse[3].xyz;
+                            cloudFeetPlayerDist = length(solidFeetPos);
+                        }
+                    }
+                #else
+                    float solidDepthVanilla = texelFetch(depthtex1, screenTexelCoord, 0).x;
+                    if(isEyeInWater == 1 || depth < 1.0){
+                        if(solidDepthVanilla >= 1.0){
+                            isCloudSky = true;
+                        } else {
+                            vec3 solidViewPos = getViewPos(gbufferProjectionInverse, vec3(texCoord, solidDepthVanilla));
+                            vec3 solidFeetPos = mat3(gbufferModelViewInverse) * solidViewPos + gbufferModelViewInverse[3].xyz;
+                            cloudFeetPlayerDist = length(solidFeetPos);
+                        }
+                    }
+                #endif
+
+                #ifdef VOXY
+                    float cloudRenderDistance = getSceneRenderDistance();
+                    #ifndef FORCE_DISABLE_WEATHER
+                        cloudRenderDistance *= 1.0 - rainStrength * 0.5;
+                    #endif
+                #else
+                    float cloudRenderDistance = volumetricCloudFar;
+                #endif
+
+                vec3 cloudStartPos0 = vec3(cameraPosition.x + fragmentFrameTime, cameraPosition.y - volumetricCloudHeight, cameraPosition.z);
+                vec3 cloudRayDir = nFeetPlayerPos;
+                if(resolvedWater || isEyeInWater == 1){
+                    #ifdef WATER_NORMAL
+                        vec2 waveNorm = H2NWater((feetPlayerPos.xz + cameraPosition.xz) * waterTileSizeInv).xy;
+                        cloudRayDir = normalize(nFeetPlayerPos + vec3(waveNorm.x, 0.0, waveNorm.y) * 0.2);
+                    #endif
+                }
+
+                vec2 cloudData = volumetricClouds(cloudRayDir, cloudStartPos0, cloudFeetPlayerDist, cloudRenderDistance, dither.x, isCloudSky);
+
+                #ifdef DOUBLE_LAYERED_CLOUDS
+                    vec3 cloudStartPos1 = vec3(cloudStartPos0.x, cloudStartPos0.y - SECOND_CLOUD_HEIGHT, cloudStartPos0.z);
+                    cloudData = max(volumetricClouds(cloudRayDir, cloudStartPos1, cloudFeetPlayerDist, cloudRenderDistance, dither.x, isCloudSky).yx, cloudData);
+                #endif
+
+                #ifdef DYNAMIC_CLOUDS
+                    float fadeTime = saturate(sin(fragmentFrameTime * FADE_SPEED) * 0.8 + 0.5);
+                    float cloudFinal = mix(mix(cloudData.x, cloudData.y, fadeTime), max(cloudData.x, cloudData.y), rainStrength) * 0.125;
+                #else
+                    float cloudFinal = mix(cloudData.x, max(cloudData.x, cloudData.y), rainStrength) * 0.125;
+                #endif
+
+                vec3 rawCloudCol;
+                #ifdef FORCE_DISABLE_DAY_CYCLE
+                    rawCloudCol = (toLinear(nightVision * 0.5 + AMBIENT_LIGHTING) + lightningFlash) + lightCol + skyCol;
+                #else
+                    rawCloudCol = (toLinear(nightVision * 0.5 + AMBIENT_LIGHTING) + lightningFlash) + mix(moonCol, sunCol, dayCycleAdjust) + skyCol;
+                #endif
+
+                if (isEyeInWater == 1) {
+                    float snellFade = saturate(nFeetPlayerPos.y * 1.8 - 0.2);
+                    float waterDepth = clamp(feetPlayerDist, 1.0, 45.0);
+                    const vec3 waterExt = vec3(0.36, 0.085, 0.042);
+                    vec3 waterTrans = exp(-waterExt * waterDepth);
+                    vec3 waterFogCol = toLinear(clamp(fogColor, vec3(0.0), vec3(1.0))) * vec3(0.8, 1.25, 0.95);
+                    vec3 waterTint = normalize(waterFogCol + vec3(0.02, 0.32, 0.26));
+                    float cloudLum = max(rawCloudCol.r, max(rawCloudCol.g, rawCloudCol.b));
+                    vec3 submergedCloudCol = mix(rawCloudCol * waterTrans, waterTint * cloudLum, clamp(waterDepth * 0.08, 0.3, 0.95));
+                    
+                    float depthCloudFade = exp(-waterDepth * 0.08);
+                    sceneColOut = mix(sceneColOut, submergedCloudCol, cloudFinal * snellFade * depthCloudFade);
+                } else {
+                    sceneColOut = mix(sceneColOut, rawCloudCol, cloudFinal);
+                }
+            #endif
+        }
 
         // Clamp scene color to prevent NaNs during post processing
-        sceneColOut = max(sceneColOut, vec3(0));
+        sceneColOut = max(sceneColOut, vec3(0.0));
     }
 #endif

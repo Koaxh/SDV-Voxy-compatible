@@ -17,7 +17,12 @@
 
 #ifdef VERTEX
     void main(){
-        gl_Position = vec4(gl_Vertex.xy * 2.0 - 1.0, 0, 1);
+        #ifdef BLOOM
+            // Crop vertex quad to bloom tile bounding box so hardware rasterizer skips 89.86% of the screen
+            gl_Position = vec4(gl_Vertex.x * (2.0 * 0.26) - 1.0, gl_Vertex.y * (2.0 * 0.39) - 1.0, 0.0, 1.0);
+        #else
+            gl_Position = vec4(gl_Vertex.xy * 2.0 - 1.0, 0.0, 1.0);
+        #endif
     }
 #endif
 

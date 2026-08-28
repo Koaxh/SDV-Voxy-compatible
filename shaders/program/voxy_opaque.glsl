@@ -186,18 +186,16 @@ void getVoxyCrossPlantGeometry(
 }
 
 vec3 reconstructVoxyFeetPlayerPosition() {
-    vec3 screenPosition = vec3(
-        gl_FragCoord.xy / vec2(viewWidth, viewHeight),
-        gl_FragCoord.z
-    );
+    vec2 screenUv = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+    vec2 ndcXY = screenUv * 2.0 - 1.0;
+    float ndcZ = SCREEN2NDC_DEPTH(gl_FragCoord.z);
 
-    vec4 viewPosition = vxProjInv * vec4(
-        screenPosition.xy * 2.0 - 1.0,
-        SCREEN2NDC_DEPTH(screenPosition.z),
-        1.0
+    float invW = 1.0 / (ndcZ * vxProjInv[2][3] + vxProjInv[3][3]);
+    vec3 viewPosition = vec3(
+        (ndcXY * vec2(vxProjInv[0][0], vxProjInv[1][1]) + vxProjInv[3].xy) * invW,
+        -invW
     );
-    viewPosition /= viewPosition.w;
-    return (gbufferModelViewInverse * viewPosition).xyz;
+    return mat3(gbufferModelViewInverse) * viewPosition + gbufferModelViewInverse[3].xyz;
 }
 
 // Integrated PBR starts ordinary terrain at porosity=0, metallic=0.04 and
@@ -267,20 +265,14 @@ vec4 sampleVoxySurfaceColour(
     VoxyFragmentParameters parameters,
     vec3 feetPlayerPosition
 ) {
-    // Beyond 256m, a block quad occupies only ~1 pixel or less on screen.
-    // Skip expensive manual derivatives (dFdx/dFdy), random rotation hashing,
-    // and textureGrad sampling by directly returning Voxy's pre-baked colour.
-    if (dot(feetPlayerPosition.xz, feetPlayerPosition.xz) > 65536.0) {
+    // Beyond 256m or for standard non-rotated materials, reuse Voxy's initial textureGrad sample.
+    // Only randomize the grass/dirt top faces that need 4-way random orientation.
+    if (parameters.customId != VOXY_RANDOM_Y_SURFACE_ID || dot(feetPlayerPosition.xz, feetPlayerPosition.xz) > 65536.0) {
         return parameters.sampledColour;
     }
 
-    // Accepted limitation: once a coarse LOD voxel has collapsed several
-    // block materials into one modelId, their original distribution is gone.
-    // This path only restores the surviving face texture's world-space scale.
-    // getFace() is the source atlas face. parameters.face may subsequently be
-    // flipped for the geometric normal, while the texture cell stays here.
     uint sourceFace = getFace();
-    if (!canWorldLockVoxyFace(parameters.modelId, sourceFace)) {
+    if (sourceFace != 1u || !canWorldLockVoxyFace(parameters.modelId, sourceFace)) {
         return parameters.sampledColour;
     }
 
@@ -293,30 +285,35 @@ vec4 sampleVoxySurfaceColour(
         sectionWorldPosition
     );
 
+    // Move just inside the owning block before flooring: an up face lies
+    // on the next block's integer Y boundary, while dirt paths already lie
+    // slightly below it. baseSectionPos is measured in 32-block sections.
+    ivec3 blockPosition = (baseSectionPos << 5) + ivec3(floor(
+        sectionWorldPosition - vec3(0.0, 0.001, 0.0)
+    ));
+    uint surfaceVariant = getVoxyRandomYVariant(blockPosition);
+
+    // SoftwareModelTextureBakery always uses seed 42. For an equal-weight
+    // four-entry list that selects entry 2 (the 180-degree model), so sample
+    // the baked image at bakedRotation - requestedRotation.
+    uint relativeQuarterTurns = (2u - surfaceVariant) & 3u;
+
+    // [Optimization]: When relative rotation is 0 (25% of blocks), baked orientation matches required variant!
+    // Reuse Voxy's sampledColour directly with zero extra textureGrad calls.
+    if (relativeQuarterTurns == 0u) {
+        return parameters.sampledColour;
+    }
+
     vec2 localFaceUv = fract(worldFaceUv);
     vec2 localFaceUvDx = dFdx(worldFaceUv);
     vec2 localFaceUvDy = dFdy(worldFaceUv);
 
-    if (parameters.customId == VOXY_RANDOM_Y_SURFACE_ID && sourceFace == 1u) {
-        // Move just inside the owning block before flooring: an up face lies
-        // on the next block's integer Y boundary, while dirt paths already lie
-        // slightly below it. baseSectionPos is measured in 32-block sections.
-        ivec3 blockPosition = (baseSectionPos << 5) + ivec3(floor(
-            sectionWorldPosition - vec3(0.0, 0.001, 0.0)
-        ));
-        uint surfaceVariant = getVoxyRandomYVariant(blockPosition);
-
-        // SoftwareModelTextureBakery always uses seed 42. For an equal-weight
-        // four-entry list that selects entry 2 (the 180-degree model), so sample
-        // the baked image at bakedRotation - requestedRotation.
-        uint relativeQuarterTurns = (2u - surfaceVariant) & 3u;
-        rotateVoxyUvClockwise(
-            relativeQuarterTurns,
-            localFaceUv,
-            localFaceUvDx,
-            localFaceUvDy
-        );
-    }
+    rotateVoxyUvClockwise(
+        relativeQuarterTurns,
+        localFaceUv,
+        localFaceUvDx,
+        localFaceUvDy
+    );
 
     uvec2 modelCell = uvec2(
         parameters.modelId & 255u,
@@ -380,12 +377,16 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
     #endif
     vec3 baseColor = toLinear(srgbAlbedo);
 
-    // Decode the cuboid face normal from Voxy's face byte.
-    vec3 normal = vec3(
-        uint((parameters.face >> 1u) == 2u),
-        uint((parameters.face >> 1u) == 0u),
-        uint((parameters.face >> 1u) == 1u)
-    ) * (float(int(parameters.face) & 1) * 2.0 - 1.0);
+    // [MOD-8]: Decode cuboid face normal via 1-cycle constant array lookup
+    const vec3 VOXY_NORMALS[6] = vec3[6](
+        vec3( 0.0, -1.0,  0.0), // 0: Down (-Y)
+        vec3( 0.0,  1.0,  0.0), // 1: Up   (+Y)
+        vec3( 0.0,  0.0, -1.0), // 2: North (-Z)
+        vec3( 0.0,  0.0,  1.0), // 3: South (+Z)
+        vec3(-1.0,  0.0,  0.0), // 4: West  (-X)
+        vec3( 1.0,  0.0,  0.0)  // 5: East  (+X)
+    );
+    vec3 normal = VOXY_NORMALS[parameters.face & 7u];
 
     vec3 crossPlaneNormalA = normal;
     vec3 crossPlaneNormalB = normal;
@@ -473,12 +474,28 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
         vec3 vanillaCastShadow = vec3(1.0);
         float vanillaWaterCasterCoverage = 0.0;
         #ifdef SHADOW_MAPPING
-            lodCastShadow = getVoxyTemporalCastShadow(currentFeetPlayerPos);
-            vanillaCastShadow = getVoxyVanillaCastShadow(
-                currentFeetPlayerPos,
-                normal,
-                vanillaWaterCasterCoverage
-            );
+            bool hasDirectSunlight = (directionalDiffuse > 0.0) && (sunCaveGate > 0.0) && (shdFade > 0.0);
+            #ifndef FORCE_DISABLE_WEATHER
+                hasDirectSunlight = hasDirectSunlight || (rainStrength > 0.0 && skyLightSquared > 0.0 && shdFade > 0.0);
+            #endif
+
+            if (hasDirectSunlight) {
+                lodCastShadow = getVoxyTemporalCastShadow(currentFeetPlayerPos);
+                if (dot(currentFeetPlayerPos.xz, currentFeetPlayerPos.xz) <= squared(shadowDistance)) {
+                    vanillaCastShadow = getVoxyVanillaCastShadow(
+                        currentFeetPlayerPos,
+                        normal,
+                        vanillaWaterCasterCoverage
+                    );
+                } else {
+                    vanillaCastShadow = vec3(1.0);
+                    vanillaWaterCasterCoverage = 0.0;
+                }
+            } else {
+                lodCastShadow = 1.0;
+                vanillaCastShadow = vec3(0.0);
+                vanillaWaterCasterCoverage = 0.0;
+            }
         #endif
         if (isEyeInWater == 1) {
             sunCaveGate = mix(
@@ -509,18 +526,7 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
                 vec3 viewDirection = -fastNormalize(currentFeetPlayerPos);
                 float viewNormalDot = dot(normal, viewDirection);
 
-                // Voxy's accepted dry path predates Integrated-PBR GGX. Add
-                // only the wet-minus-dry GGX delta so clear weather remains
-                // bit-identical while the weather response matches Vanilla.
-                vec3 drySpecular = getSpecularBRDF(
-                    viewDirection,
-                    normal,
-                    baseColor,
-                    NdotL,
-                    viewNormalDot,
-                    0.04,
-                    0.0
-                );
+                // [MOD-8]: Fused GGX Specular Delta: Single-pass BRDF evaluation
                 vec3 wetSpecular = getSpecularBRDF(
                     viewDirection,
                     normal,
@@ -530,7 +536,17 @@ void voxy_emitFragment(VoxyFragmentParameters parameters) {
                     voxyMaterialMetallic,
                     voxyMaterialSmoothness
                 );
-                wetSpecularDelta = (wetSpecular - drySpecular)
+
+                // Analytical dry baseline (smoothness == 0.0, alpha == 1.0, D = 1/PI)
+                vec3 halfwayDir = fastNormalize(voxyLightDir + viewDirection);
+                float LH = clamp(dot(voxyLightDir, halfwayDir), 0.0, 1.0);
+                float dryFresnel = mix(0.04, 1.0, exp2(-9.28 * LH));
+                float drySpecularVal = min(sunMoonIntensitySqrd, dryFresnel * (NdotL * (1.0 / PI)));
+                #ifndef FORCE_DISABLE_WEATHER
+                    drySpecularVal *= 1.0 - rainStrength;
+                #endif
+
+                wetSpecularDelta = max(wetSpecular - vec3(drySpecularVal), vec3(0.0))
                     * shdCol * LIGHT_COLOR_DATA_BLOCK0;
             }
         #endif

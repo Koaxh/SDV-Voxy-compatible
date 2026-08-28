@@ -42,25 +42,22 @@ vec3 getVoxyVanillaCastShadow(
         return vec3(1.0);
     }
 
-    vec3 shdPos = vec3(
-        shadowProjection[0].x,
-        shadowProjection[1].y,
-        shadowProjection[2].z
-    ) * (mat3(shadowModelView) * feetPlayerPos + shadowModelView[3].xyz);
-    shdPos.z += shadowProjection[3].z;
+    // [MOD-8]: Fused Shadow MVP transformation (eliminates separate scale/offset stages)
+    mat4 shadowMVP = shadowProjection * shadowModelView;
+    vec3 shdPos = mat3(shadowMVP) * feetPlayerPos + shadowMVP[3].xyz;
 
     shdPos = vec3(
         shdPos.xy / (length(shdPos.xy) * 2.0 + 0.2),
         shdPos.z * 0.1
     ) + 0.5;
 
-    const vec3 biasAdjustFactor = vec3(
-        shadowMapPixelSize * 2.0,
-        shadowMapPixelSize * 2.0,
-        -0.00006103515625
-    );
+    // [MOD-8]: Slope-Scaled Depth Bias (eliminates acne at grazing angles)
     vec3 shadowNormal = mat3(shadowModelView) * normal;
-    shdPos += shadowNormal * biasAdjustFactor;
+    float slope = length(shadowNormal.xy) / max(abs(shadowNormal.z), 1e-4);
+    float slopeBiasZ = -0.00006103515625 * (1.0 + 1.5 * clamp(slope, 0.0, 4.0));
+
+    shdPos.xy += shadowNormal.xy * (shadowMapPixelSize * 2.0);
+    shdPos.z  += shadowNormal.z  * slopeBiasZ;
 
     vec3 shadowColor;
     #ifdef SHADOW_FILTER

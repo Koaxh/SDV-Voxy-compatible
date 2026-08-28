@@ -41,7 +41,7 @@
     const int colortex3Format = RGB8;
     const int colortex4Format = R11F_G11F_B10F;
     const int colortex5Format = RGBA16F;
-    const int colortex7Format = RGB16F;
+    const int colortex7Format = R11F_G11F_B10F;
     const int colortex15Format = R32F;
     const int colortex16Format = RGBA16F;
     const int colortex17Format = RGBA16F;

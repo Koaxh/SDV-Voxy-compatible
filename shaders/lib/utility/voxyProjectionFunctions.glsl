@@ -51,8 +51,18 @@ vec3 getVoxyScreenPos(in vec4 clipPos) {
 }
 
 vec3 getVoxyViewPos(in mat4 projectionInverse, in vec3 screenPos) {
-    vec4 viewPos = projectionInverse * vec4(getVoxyNdcPos(screenPos), 1.0);
-    return viewPos.xyz / viewPos.w;
+    float ndcDepth = vxDepthZeroToOne != 0 ? screenPos.z : screenPos.z * 2.0 - 1.0;
+    float invW = 1.0 / (ndcDepth * projectionInverse[2][3] + projectionInverse[3][3]);
+    vec2 ndcXY = screenPos.xy * 2.0 - 1.0;
+    return vec3(
+        (ndcXY * vec2(projectionInverse[0][0], projectionInverse[1][1]) + projectionInverse[3].xy) * invW,
+        -invW
+    );
+}
+
+float getVoxyViewDepth(in mat4 projectionInverse, in float screenDepth) {
+    float ndcDepth = vxDepthZeroToOne != 0 ? screenDepth : screenDepth * 2.0 - 1.0;
+    return -1.0 / (ndcDepth * projectionInverse[2][3] + projectionInverse[3][3]);
 }
 
 #endif
