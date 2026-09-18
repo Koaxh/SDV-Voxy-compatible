@@ -30,9 +30,6 @@ Voxy 接收面    = SDV CSM × Voxy-only 遮蔽 × 原有 LOD 直接光。完美
 
 ## 目前仍存在以下问题
 
-1.开启dungeon描边会导致lod与vanilla chunk边缘产生差异，肉眼可见，但不明显，将描边亮度降低至0.5即可。
-
-2.水下视角漏光（待修）
 
 3.使用了dFdx/dFdy/discard，derivatives 可能未定义,discard 未来也可能不受voxy支持
 
